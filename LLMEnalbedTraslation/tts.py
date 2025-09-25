@@ -12,10 +12,11 @@ from pydub import AudioSegment
 try:
     from TTS.api import TTS  # type: ignore
     from TTS.tts.configs.xtts_config import XttsConfig  # type: ignore
+    from TTS.tts.models.xtts import XttsAudioConfig  # type: ignore
     try:  # Register XTTS config class for torch.load when weights_only=True (PyTorch >= 2.6)
         from torch.serialization import add_safe_globals
 
-        add_safe_globals([XttsConfig])
+        add_safe_globals([XttsConfig, XttsAudioConfig])
     except Exception:
         pass  # Older torch versions or failures fall back to default behaviour
 except Exception as exc:  # pragma: no cover - optional dependency load
