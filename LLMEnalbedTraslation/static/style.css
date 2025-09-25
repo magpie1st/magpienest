@@ -164,6 +164,39 @@ button:disabled {
   gap: 6px;
 }
 
+.tts {
+  margin-top: 20px;
+}
+
+.tts-controls {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.tts-status {
+  margin-bottom: 12px;
+}
+
+.tts-status p {
+  margin: 0 0 8px 0;
+  font-weight: 500;
+}
+
+.tts-status.loading p {
+  color: #f59e0b;
+}
+
+.tts-status.error p {
+  color: var(--error);
+}
+
+.tts audio {
+  width: 100%;
+  margin-top: 8px;
+}
+
 .hint {
   margin: 0;
   font-size: 0.85rem;

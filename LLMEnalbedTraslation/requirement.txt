@@ -4,3 +4,5 @@ uvicorn[standard]>=0.23
 requests>=2.31
 jinja2>=3.1
 tokenizers>=0.15  # optional: precise token counting (requires tokenizer JSON)
+pydub>=0.25  # requires system ffmpeg for MP3 export
+# Coqui XTTS needs manual install (pip install git+https://github.com/coqui-ai/TTS)
