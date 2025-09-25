@@ -45,9 +45,23 @@ Coqui XTTS v2 낭독 기능 설치
    sudo apt update
    sudo apt install build-essential python3-dev libsndfile1 ffmpeg
    ```
-2. PyTorch (미설치 시 먼저 준비) – GPU 유무에 따라 맞는 wheel 설치.
-3. Coqui XTTS 라이브러리
+2. Python 3.9~3.11 버전의 가상환경을 준비합니다. (PyTorch/Coqui TTS는 Python 3.12 이상을 지원하지 않습니다.)
    ```bash
+   # 예) pyenv
+   pyenv install 3.11.9
+   pyenv virtualenv 3.11.9 xtts-env
+   pyenv activate xtts-env
+   ```
+3. PyTorch 설치 (CUDA/CPU 환경에 맞춰 알맞은 wheel 선택)
+   ```bash
+   pip install torch torchvision torchaudio
+   ```
+4. Coqui XTTS 의존성 설치
+   ```bash
+   pip install pydub
    pip install git+https://github.com/coqui-ai/TTS
    ```
-4. 설치 후 `python -m TTS --text "Hello"` 등으로 정상 동작 여부를 확인할 수 있습니다.
+5. 설치 확인
+   ```bash
+   python -m TTS --text "Hello"
+   ```

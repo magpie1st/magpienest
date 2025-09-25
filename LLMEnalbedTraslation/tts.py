@@ -11,6 +11,13 @@ from pydub import AudioSegment
 
 try:
     from TTS.api import TTS  # type: ignore
+    from TTS.tts.configs.xtts_config import XttsConfig  # type: ignore
+    try:  # Register XTTS config class for torch.load when weights_only=True (PyTorch >= 2.6)
+        from torch.serialization import add_safe_globals
+
+        add_safe_globals([XttsConfig])
+    except Exception:
+        pass  # Older torch versions or failures fall back to default behaviour
 except Exception as exc:  # pragma: no cover - optional dependency load
     raise ImportError(
         "The 'TTS' package is required for Coqui XTTS support. Install with 'pip install git+https://github.com/coqui-ai/TTS'"
