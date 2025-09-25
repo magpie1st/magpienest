@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LLM Enabled Translation</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}" />
+  </head>
+  <body>
+    <header>
+      <h1>LLM 번역기</h1>
+      <p class="subtitle">Jetson 기반 Ollama 모델을 이용해 영어 텍스트를 한국어로 번역합니다.</p>
+    </header>
+
+    <main>
+      <section class="settings">
+        <h2>Jetson 연결 설정</h2>
+        <div class="form-grid">
+          <label for="hostInput">호스트</label>
+          <input id="hostInput" type="text" value="{{ default_host }}" placeholder="예: 192.168.55.1" />
+
+          <label for="portInput">포트</label>
+          <input id="portInput" type="number" min="1" max="65535" value="{{ default_port }}" placeholder="예: 11434" />
+
+          <label for="timeoutInput">Timeout (sec)</label>
+          <input
+            id="timeoutInput"
+            type="number"
+            min="10"
+            max="600"
+            value="{{ default_timeout }}"
+            placeholder="예: 120"
+          />
+        </div>
+        <div class="settings-actions">
+          <button id="saveConfigBtn" type="button">기본값 저장</button>
+          <button id="testConnectionBtn" type="button">연결 확인</button>
+        </div>
+      </section>
+
+      <section class="translator">
+        <div class="toolbar">
+          <label for="modelSelect">번역 모델</label>
+          <select id="modelSelect">
+            {% for model in models %}
+            <option value="{{ model }}">{{ model }}</option>
+            {% endfor %}
+          </select>
+
+          <label for="temperatureInput">Temperature</label>
+          <input
+            id="temperatureInput"
+            type="number"
+            step="0.1"
+            min="0"
+            max="2"
+            value="{{ default_temperature }}"
+            title="샘플링 온도 (0은 결정적 출력)"
+          />
+
+          <label class="checkbox" title="스트리밍 응답 사용">
+            <input id="streamCheckbox" type="checkbox" {% if default_stream %}checked{% endif %} />
+            <span>Stream</span>
+          </label>
+
+          <label class="checkbox" title="청크 진행률 표시">
+            <input id="progressCheckbox" type="checkbox" {% if default_progress %}checked{% endif %} />
+            <span>Progress</span>
+          </label>
+
+          <label class="checkbox" title="청크 번역을 받을 때마다 출력">
+            <input id="liveTextCheckbox" type="checkbox" {% if default_live_text %}checked{% endif %} />
+            <span>Live Output</span>
+          </label>
+
+          <label class="checkbox" title="<think>...</think> 메타 정보를 제거">
+            <input id="stripThinkCheckbox" type="checkbox" {% if default_strip_think %}checked{% endif %} />
+            <span>Strip &lt;think&gt;</span>
+          </label>
+
+          <button id="translateBtn" type="button">번역 실행</button>
+          <button id="stopBtn" type="button" disabled>정지</button>
+          <button id="clearBtn" type="button">초기화</button>
+        </div>
+
+        <div class="prompt-config">
+          <label for="promptTemplate">프롬프트 템플릿</label>
+          <textarea
+            id="promptTemplate"
+            rows="4"
+            placeholder="{source} 자리에 입력 텍스트가 삽입됩니다."
+          >{{ default_prompt }}</textarea>
+          <p class="hint">템플릿에 <code>{source}</code>가 포함되어 있으면 해당 위치에 입력한 영어 문장이 들어갑니다.</p>
+        </div>
+
+        <div class="advanced-options">
+          <div class="field">
+            <label for="maxTokensInput">Chunk Max Tokens</label>
+            <input
+              id="maxTokensInput"
+              type="number"
+              min="128"
+              max="6000"
+              value="{{ default_max_tokens }}"
+              title="문장 묶음을 보낼 때 최대 토큰 수"
+            />
+          </div>
+          <div class="field">
+            <label for="maxSentencesInput">Chunk Max Sentences</label>
+            <input
+              id="maxSentencesInput"
+              type="number"
+              min="1"
+              max="20"
+              value="{{ default_max_sentences }}"
+              title="한 번에 번역 요청할 최대 문장 수"
+            />
+          </div>
+          <div class="field">
+            <label for="retryAttemptsInput">Retry Attempts</label>
+            <input
+              id="retryAttemptsInput"
+              type="number"
+              min="0"
+              max="5"
+              value="{{ default_retry_attempts }}"
+              title="출력이 깨졌을 때 재시도 횟수"
+            />
+          </div>
+        </div>
+
+        <div class="panes">
+          <div class="pane">
+            <h3>영어 텍스트</h3>
+            <textarea id="sourceText" placeholder="번역할 영어 문장을 입력하세요."></textarea>
+          </div>
+          <div class="pane">
+            <h3>한국어 번역</h3>
+            <textarea id="translatedText" readonly placeholder="번역 결과가 여기에 표시됩니다."></textarea>
+          </div>
+        </div>
+      </section>
+
+      <section class="status" id="statusPanel" hidden>
+        <p id="statusMessage"></p>
+        <div id="progressWrapper" class="progress" hidden>
+          <div class="progress-bar">
+            <div id="progressFill" class="progress-fill"></div>
+          </div>
+          <span id="progressLabel">0%</span>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const defaultState = {
+        host: "{{ default_host }}",
+        port: {{ default_port }},
+        models: {{ models | tojson }},
+        promptTemplate: {{ default_prompt | tojson }},
+        temperature: {{ default_temperature }},
+        stream: {{ 'true' if default_stream else 'false' }},
+        maxTokens: {{ default_max_tokens }},
+        maxSentences: {{ default_max_sentences }},
+        retryAttempts: {{ default_retry_attempts }},
+        timeout: {{ default_timeout }},
+        progress: {{ 'true' if default_progress else 'false' }},
+        liveText: {{ 'true' if default_live_text else 'false' }},
+        stripThink: {{ 'true' if default_strip_think else 'false' }},
+      };
+
+      const hostInput = document.getElementById("hostInput");
+      const portInput = document.getElementById("portInput");
+      const timeoutInput = document.getElementById("timeoutInput");
+      const modelSelect = document.getElementById("modelSelect");
+      const translateBtn = document.getElementById("translateBtn");
+      const stopBtn = document.getElementById("stopBtn");
+      const clearBtn = document.getElementById("clearBtn");
+      const saveConfigBtn = document.getElementById("saveConfigBtn");
+      const testConnectionBtn = document.getElementById("testConnectionBtn");
+      const promptTemplateInput = document.getElementById("promptTemplate");
+      const temperatureInput = document.getElementById("temperatureInput");
+      const streamCheckbox = document.getElementById("streamCheckbox");
+      const sourceText = document.getElementById("sourceText");
+      const translatedText = document.getElementById("translatedText");
+      const statusPanel = document.getElementById("statusPanel");
+      const statusMessage = document.getElementById("statusMessage");
+      const maxTokensInput = document.getElementById("maxTokensInput");
+      const maxSentencesInput = document.getElementById("maxSentencesInput");
+      const retryAttemptsInput = document.getElementById("retryAttemptsInput");
+      const progressCheckbox = document.getElementById("progressCheckbox");
+      const liveTextCheckbox = document.getElementById("liveTextCheckbox");
+      const stripThinkCheckbox = document.getElementById("stripThinkCheckbox");
+      const progressWrapper = document.getElementById("progressWrapper");
+      const progressFill = document.getElementById("progressFill");
+      const progressLabel = document.getElementById("progressLabel");
+
+      let currentController = null;
+
+      function showStatus(message, isError = false, isLoading = false) {
+        statusMessage.textContent = message;
+        statusPanel.hidden = false;
+        statusPanel.classList.toggle("error", isError);
+        statusPanel.classList.toggle("loading", isLoading);
+        if (!message) {
+          statusPanel.hidden = true;
+        }
+      }
+
+      function resetProgress() {
+        progressWrapper.hidden = true;
+        progressFill.style.width = "0%";
+        progressLabel.textContent = "0%";
+      }
+
+      function updateProgress(percent) {
+        progressWrapper.hidden = false;
+        const clamped = Math.max(0, Math.min(100, percent));
+        progressFill.style.width = `${clamped}%`;
+        progressLabel.textContent = `${clamped}%`;
+      }
+
+      function parsePort(value) {
+        const num = Number.parseInt(value, 10);
+        return Number.isNaN(num) ? undefined : num;
+      }
+
+      function parseTimeout(value) {
+        const num = Number.parseInt(value, 10);
+        return Number.isNaN(num) ? undefined : num;
+      }
+
+      function parseTemperature(value) {
+        if (value === "" || value === undefined) {
+          return undefined;
+        }
+        const parsed = Number.parseFloat(value);
+        return Number.isNaN(parsed) ? undefined : parsed;
+      }
+
+      function replaceModelOptions(models) {
+        const previous = modelSelect.value;
+        modelSelect.innerHTML = "";
+        models.forEach((model) => {
+          const opt = document.createElement("option");
+          opt.value = model;
+          opt.textContent = model;
+          modelSelect.appendChild(opt);
+        });
+        if (models.includes(previous)) {
+          modelSelect.value = previous;
+        } else if (models.length > 0) {
+          modelSelect.value = models[0];
+        }
+      }
+
+      saveConfigBtn.addEventListener("click", async () => {
+        try {
+          const body = {
+            host: hostInput.value.trim() || undefined,
+            port: parsePort(portInput.value),
+            timeout: parseTimeout(timeoutInput.value),
+          };
+          const res = await fetch("/api/config", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.detail || "설정을 저장하지 못했습니다.");
+          }
+          const data = await res.json();
+          const timeoutInfo = data.timeout ? ` (timeout ${data.timeout}s)` : "";
+          showStatus(`기본 연결 정보가 ${data.host}:${data.port}${timeoutInfo} 로 저장되었습니다.`);
+        } catch (error) {
+          showStatus(error.message || "설정을 저장하지 못했습니다.", true);
+        }
+      });
+
+      testConnectionBtn.addEventListener("click", async () => {
+        showStatus("연결 확인 중...", false, true);
+        try {
+          const body = {
+            host: hostInput.value.trim() || undefined,
+            port: parsePort(portInput.value),
+            timeout: parseTimeout(timeoutInput.value),
+          };
+          const res = await fetch("/api/models", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.detail || "연결에 실패했습니다.");
+          }
+          if (Array.isArray(data.models) && data.models.length > 0) {
+            replaceModelOptions(data.models);
+            showStatus(`연결 성공: ${data.models.length}개 모델 확인.`);
+          } else {
+            showStatus("연결은 되었으나 사용 가능한 모델이 없습니다.", true);
+          }
+        } catch (error) {
+          showStatus(error.message || "연결 확인 중 오류가 발생했습니다.", true);
+        }
+      });
+
+      translateBtn.addEventListener("click", async () => {
+        const text = sourceText.value.trim();
+        if (!text) {
+          showStatus("영어 텍스트를 입력해 주세요.", true);
+          return;
+        }
+        const model = modelSelect.value;
+        if (!model) {
+          showStatus("모델을 선택해 주세요.", true);
+          return;
+        }
+        showStatus("번역 중입니다...", false, true);
+        translatedText.value = "";
+        let controller;
+        try {
+          if (currentController) {
+            currentController.abort();
+          }
+          controller = new AbortController();
+          currentController = controller;
+          stopBtn.disabled = false;
+          translateBtn.disabled = true;
+
+          const body = {
+            text,
+            model,
+            host: hostInput.value.trim() || undefined,
+            port: parsePort(portInput.value),
+            prompt_template: promptTemplateInput.value.trim() || undefined,
+            stream: streamCheckbox.checked,
+            timeout: parseTimeout(timeoutInput.value),
+            progress_updates: progressCheckbox.checked,
+            live_text: liveTextCheckbox.checked,
+            strip_think_tag: stripThinkCheckbox.checked,
+          };
+          const temperature = parseTemperature(temperatureInput.value);
+          if (temperature !== undefined) {
+            body.temperature = temperature;
+          }
+          const maxTokens = parseInt(maxTokensInput.value, 10);
+          if (!Number.isNaN(maxTokens)) {
+            body.max_tokens_per_chunk = maxTokens;
+          }
+          const maxSentences = parseInt(maxSentencesInput.value, 10);
+          if (!Number.isNaN(maxSentences)) {
+            body.max_sentences_per_chunk = maxSentences;
+          }
+          const retryAttempts = parseInt(retryAttemptsInput.value, 10);
+          if (!Number.isNaN(retryAttempts)) {
+            body.retry_garbage_attempts = retryAttempts;
+          }
+          resetProgress();
+          const res = await fetch("/api/translate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+            signal: controller.signal,
+          });
+
+          if (progressCheckbox.checked) {
+            const supportsStream = res.body && typeof res.body.getReader === "function";
+            if (supportsStream) {
+              await handleStreamingResponse(res, liveTextCheckbox.checked);
+            } else {
+              await handleBufferedProgress(res, liveTextCheckbox.checked);
+            }
+          } else {
+            const data = await res.json();
+            if (!res.ok) {
+              throw new Error(data.detail || "번역에 실패했습니다.");
+            }
+            translatedText.value = data.translation || "";
+            showStatus("번역이 완료되었습니다.");
+          }
+        } catch (error) {
+          if (error && error.name === "AbortError") {
+            showStatus("번역을 중지했습니다.");
+            resetProgress();
+          } else {
+            translatedText.value = "";
+            showStatus((error && error.message) || "번역에 실패했습니다.", true);
+          }
+        } finally {
+          if (currentController === controller) {
+            currentController = null;
+            stopBtn.disabled = true;
+            translateBtn.disabled = false;
+          }
+        }
+      });
+
+      clearBtn.addEventListener("click", () => {
+        sourceText.value = "";
+        translatedText.value = "";
+        showStatus("", false);
+      });
+
+      stopBtn.addEventListener("click", () => {
+        if (currentController) {
+          currentController.abort();
+          currentController = null;
+          stopBtn.disabled = true;
+          translateBtn.disabled = false;
+          showStatus("번역 중지를 요청했습니다.");
+        }
+      });
+
+      // Initialise state
+      replaceModelOptions(defaultState.models);
+      showStatus("", false);
+      hostInput.value = defaultState.host;
+      portInput.value = defaultState.port;
+      promptTemplateInput.value = defaultState.promptTemplate || "";
+      temperatureInput.value =
+        defaultState.temperature !== undefined && defaultState.temperature !== null
+          ? defaultState.temperature
+          : "";
+      streamCheckbox.checked = defaultState.stream === true || defaultState.stream === "true";
+      maxTokensInput.value = defaultState.maxTokens;
+      maxSentencesInput.value = defaultState.maxSentences;
+      retryAttemptsInput.value = defaultState.retryAttempts;
+      timeoutInput.value =
+        defaultState.timeout !== undefined && defaultState.timeout !== null ? defaultState.timeout : "";
+      progressCheckbox.checked = defaultState.progress === true || defaultState.progress === "true";
+      liveTextCheckbox.checked = defaultState.liveText === true || defaultState.liveText === "true";
+      stripThinkCheckbox.checked = defaultState.stripThink === true || defaultState.stripThink === "true";
+      resetProgress();
+      stopBtn.disabled = true;
+
+      async function handleStreamingResponse(response, includeText) {
+        if (!response.ok || !response.body) {
+          const data = await response.json().catch(() => ({ detail: "번역에 실패했습니다." }));
+          throw new Error(data.detail || "번역에 실패했습니다.");
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let buffer = "";
+        let aggregatedText = "";
+
+        const flushBuffer = () => {
+          let newlineIndex;
+          while ((newlineIndex = buffer.indexOf("\n")) >= 0) {
+            const line = buffer.slice(0, newlineIndex).trim();
+            buffer = buffer.slice(newlineIndex + 1);
+            if (!line) {
+              continue;
+            }
+            try {
+              const event = JSON.parse(line);
+              handleProgressEvent(event, includeText, (text) => {
+                aggregatedText = text;
+              });
+            } catch (err) {
+              console.warn("Invalid progress event", err, line);
+            }
+          }
+        };
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) {
+            break;
+          }
+          buffer += decoder.decode(value, { stream: true });
+          flushBuffer();
+        }
+        buffer += decoder.decode();
+        flushBuffer();
+
+        if (!aggregatedText) {
+          aggregatedText = translatedText.value;
+        }
+        translatedText.value = aggregatedText;
+        showStatus("번역이 완료되었습니다.");
+      }
+
+      async function handleBufferedProgress(response, includeText) {
+        const textData = await response.text();
+        if (!response.ok) {
+          let detail;
+          try {
+            const parsed = JSON.parse(textData);
+            detail = parsed.detail;
+          } catch (err) {
+            detail = textData || "번역에 실패했습니다.";
+          }
+          throw new Error(detail || "번역에 실패했습니다.");
+        }
+
+        const events = textData
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .map((line) => {
+            try {
+              return JSON.parse(line);
+            } catch (err) {
+              return null;
+            }
+          })
+          .filter(Boolean);
+
+        let aggregatedText = translatedText.value;
+        for (const event of events) {
+          handleProgressEvent(event, includeText, (text) => {
+            aggregatedText = text;
+          });
+        }
+
+        if (!aggregatedText) {
+          aggregatedText = translatedText.value;
+        }
+        translatedText.value = aggregatedText;
+        showStatus("번역이 완료되었습니다.");
+      }
+
+      function handleProgressEvent(event, includeText, setAggregated) {
+        switch (event.type) {
+          case "meta":
+            resetProgress();
+            showStatus("번역 준비 중...");
+            break;
+          case "chunk":
+            if (typeof event.percent === "number") {
+              updateProgress(event.percent);
+              showStatus(`번역 진행 중... (${event.percent}%)`, false, event.percent < 100);
+            }
+            if (includeText && typeof event.text === "string") {
+              const current = translatedText.value ? `${translatedText.value}\n\n${event.text}` : event.text;
+              translatedText.value = current;
+              setAggregated(current);
+            }
+            break;
+          case "done":
+            updateProgress(100);
+            setAggregated(event.translation || "");
+            translatedText.value = event.translation || "";
+            showStatus("번역이 완료되었습니다.");
+            break;
+          case "error":
+            resetProgress();
+            showStatus(event.message || "번역에 실패했습니다.", true);
+            translatedText.value = "";
+            break;
+        }
+      }
+    </script>
+  </body>
+</html>

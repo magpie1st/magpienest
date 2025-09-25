@@ -1,0 +1,277 @@
+:root {
+  color-scheme: light dark;
+  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --bg: #f5f5f5;
+  --surface: #ffffff;
+  --surface-dark: #1e1e1e;
+  --text: #222;
+  --text-dark: #f5f5f5;
+  --accent: #2563eb;
+  --accent-dark: #93c5fd;
+  --error: #dc2626;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+header {
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  color: #fff;
+  padding: 24px;
+  text-align: center;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+header .subtitle {
+  margin-top: 8px;
+  font-size: 0.95rem;
+  opacity: 0.9;
+}
+
+main {
+  max-width: 1080px;
+  margin: 24px auto;
+  padding: 0 16px 32px;
+}
+
+section {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.settings h2 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-size: 1.1rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 8px 16px;
+  align-items: center;
+}
+
+label {
+  font-weight: 600;
+}
+
+input,
+textarea,
+select,
+button {
+  font: inherit;
+  border-radius: 8px;
+  border: 1px solid rgba(100, 116, 139, 0.3);
+  padding: 10px 12px;
+  transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+button {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #1d4ed8;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.settings-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.toolbar label {
+  margin-right: 4px;
+}
+
+.toolbar button {
+  flex-shrink: 0;
+}
+
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox input {
+  width: 18px;
+  height: 18px;
+}
+
+.prompt-config {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.prompt-config textarea {
+  min-height: 140px;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+}
+
+.advanced-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.advanced-options .field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.hint code {
+  background: rgba(148, 163, 184, 0.2);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+.panes {
+  display: grid;
+  gap: 16px;
+}
+
+@media (min-width: 900px) {
+  .panes {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.pane h3 {
+  margin: 0 0 8px 0;
+  font-size: 1rem;
+}
+
+textarea {
+  min-height: 260px;
+  resize: vertical;
+}
+
+textarea[readonly] {
+  background: rgba(148, 163, 184, 0.1);
+}
+
+.status {
+  border-left: 4px solid var(--accent);
+  padding: 16px;
+}
+
+.status.loading {
+  border-color: #f59e0b;
+}
+
+.status.error {
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.status p {
+  margin: 0;
+}
+
+.progress {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.progress[hidden] {
+  display: none;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.3);
+  overflow: hidden;
+}
+
+.progress-fill {
+  width: 0%;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.2s ease;
+}
+
+.progress span,
+.progress-label {
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #0f172a;
+    color: var(--text-dark);
+  }
+
+  section {
+    background: var(--surface-dark);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  }
+
+  input,
+  textarea,
+  select {
+    background: rgba(15, 23, 42, 0.9);
+    color: var(--text-dark);
+    border-color: rgba(148, 163, 184, 0.2);
+  }
+
+  .hint {
+    color: rgba(226, 232, 240, 0.76);
+  }
+}

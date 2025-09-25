@@ -1,0 +1,27 @@
+Jetson 기반 Ollama 번역기 구성 요소
+=================================
+
+config.py
+  - Jetson 연결 기본값(192.168.55.1:11434)과 사용 가능한 모델 목록을 관리합니다.
+
+client.py
+  - Ollama REST API(`/api/tags`, `/api/generate`)와 통신하는 HTTP 클라이언트와 예외 처리를 제공합니다. 스트리밍 응답(`stream=true`)도 처리할 수 있습니다.
+
+translator.py
+  - 영어→한국어 번역 프롬프트를 생성하고 Ollama 응답을 `TranslationResult`로 래핑합니다. UI에서 전달된 프롬프트 템플릿, stream 옵션, temperature, chunk 설정 값을 반영하고, 문장 단위로 텍스트를 분할해 재시도 로직을 수행합니다.
+
+server.py
+  - FastAPI 애플리케이션 엔드포인트 (`/`, `/api/config`, `/api/models`, `/api/translate`)를 제공합니다. `/api/translate`는 temperature, stream, prompt_template, chunk, timeout 파라미터를 받아 Ollama 요청 옵션을 구성합니다.
+
+static/style.css & templates/index.html
+  - 브라우저 UI를 담당하며 모델 선택, Temperature/Stream/Timeout 설정, 프롬프트 템플릿 편집, Chunk 크기/재시도 옵션, 진행률/라이브 출력/Strip `<think>` 토글, 번역 입력/결과 창, Jetson 연결 설정 인터페이스를 제공합니다.
+
+text_utils.py
+  - 문장 분할, 토큰 길이 추정, 번역 품질 검사를 위한 유틸리티를 제공합니다. Hugging Face tokenizer JSON 경로(`QWEN_TOKENIZER_PATH`)가 설정된 경우 이를 사용해 보다 정확하게 토큰 수를 계산합니다.
+
+실행 및 테스트
+-------------
+
+1. `pip install -r requirement.txt`
+2. `uvicorn server:get_app --reload`
+3. 브라우저에서 `http://127.0.0.1:8000` 접속 후 번역 테스트
