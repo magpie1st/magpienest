@@ -1,4 +1,9 @@
 ﻿from __future__ import annotations
+# Allow running as a script: `python audiobook\__main__.py`
+import sys as _sys
+from pathlib import Path as _Path
+if __package__ is None or __package__ == "":
+    _sys.path.append(str(_Path(__file__).resolve().parents[1]))
 
 import sys
 from PySide6.QtWidgets import QApplication
@@ -14,3 +19,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
