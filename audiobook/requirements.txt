@@ -1,0 +1,9 @@
+﻿PySide6>=6.7
+pyqtgraph>=0.13
+numpy>=1.24
+soundfile>=0.12
+TTS>=0.22
+ebooklib>=0.18
+beautifulsoup4>=4.12
+pydub>=0.25
+unidecode>=1.3
