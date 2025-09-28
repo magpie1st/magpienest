@@ -4,8 +4,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Tuple, Optional
 
-from bs4 import BeautifulSoup  # type: ignore
+import ebooklib  # type: ignore
 from ebooklib import epub  # type: ignore
+from bs4 import BeautifulSoup  # type: ignore
 
 
 @dataclass
@@ -26,14 +27,11 @@ class BookMeta:
 
 def _html_to_text(html: bytes | str) -> str:
     soup = BeautifulSoup(html, "html.parser")
-    # remove scripts/styles
     for tag in soup(["script", "style"]):
         tag.decompose()
     text = soup.get_text("\n")
-    # normalize whitespace
     lines = [" ".join(line.split()) for line in text.splitlines()]
-    text = "\n".join(line for line in lines if line)
-    return text
+    return "\n".join(line for line in lines if line)
 
 
 def load_epub(path: str | Path) -> Tuple[BookMeta, List[Chapter]]:
@@ -45,15 +43,12 @@ def load_epub(path: str | Path) -> Tuple[BookMeta, List[Chapter]]:
     uid = book.uid
 
     chapters: List[Chapter] = []
-    i = 0
-    for item in book.get_items_of_type(epub.ITEM_DOCUMENT):
-        # Use the file name as a fallback title
+    for idx, item in enumerate(book.get_items_of_type(ebooklib.ITEM_DOCUMENT), start=1):
         doc_title = Path(item.get_name()).stem
         text = _html_to_text(item.get_content())
         if not text.strip():
             continue
-        chapters.append(Chapter(index=i, title=doc_title, text=text, relpath=item.get_name()))
-        i += 1
+        chapters.append(Chapter(index=idx, title=doc_title, text=text, relpath=item.get_name()))
 
     meta = BookMeta(title=title, author=author, language=language, uid=uid)
     return meta, chapters
