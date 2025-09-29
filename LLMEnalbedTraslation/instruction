@@ -11,10 +11,13 @@ translator.py
   - 영어→한국어 번역 프롬프트를 생성하고 Ollama 응답을 `TranslationResult`로 래핑합니다. UI에서 전달된 프롬프트 템플릿, stream 옵션, temperature, chunk 설정 값을 반영하고, 문장 단위로 텍스트를 분할해 재시도 로직을 수행합니다.
 
 server.py
-  - FastAPI 애플리케이션 엔드포인트 (`/`, `/api/config`, `/api/models`, `/api/translate`)를 제공합니다. `/api/translate`는 temperature, stream, prompt_template, chunk, timeout 파라미터를 받아 Ollama 요청 옵션을 구성합니다.
+  - FastAPI 애플리케이션 엔드포인트 (`/`, `/api/config`, `/api/models`, `/api/translate`, `/api/tts`)를 제공합니다. `/api/translate`는 temperature, stream, prompt_template, chunk, timeout 파라미터를 받아 Ollama 요청 옵션을 구성하고, `/api/tts`는 Coqui XTTS v2 기반 낭독을 NDJSON 스트리밍(progress/done 이벤트)으로 반환합니다.
+
+tts.py
+  - Coqui XTTS v2 모델을 감싼 `CoquiTTSService`를 통해 영어 텍스트를 MP3로 변환합니다. `pydub`/FFmpeg를 사용해 WAV→MP3로 변환하고 base64 인코딩을 지원합니다. Coqui 패키지는 `pip install git+https://github.com/coqui-ai/TTS` 등으로 별도 설치하세요.
 
 static/style.css & templates/index.html
-  - 브라우저 UI를 담당하며 모델 선택, Temperature/Stream/Timeout 설정, 프롬프트 템플릿 편집, Chunk 크기/재시도 옵션, 진행률/라이브 출력/Strip `<think>` 토글, 번역 입력/결과 창, Jetson 연결 설정 인터페이스를 제공합니다.
+  - 브라우저 UI를 담당하며 모델 선택, Temperature/Stream/Timeout 설정, 프롬프트 템플릿 편집, Chunk 크기/재시도 옵션, 진행률/라이브 출력/Strip `<think>` 토글, 번역 입력/결과 창, Jetson 연결 설정 인터페이스, XTTS 낭독 컨트롤(실행/정지/저장) 및 진행 바를 제공합니다.
 
 text_utils.py
   - 문장 분할, 토큰 길이 추정, 번역 품질 검사를 위한 유틸리티를 제공합니다. Hugging Face tokenizer JSON 경로(`QWEN_TOKENIZER_PATH`)가 설정된 경우 이를 사용해 보다 정확하게 토큰 수를 계산합니다.
@@ -25,3 +28,40 @@ text_utils.py
 1. `pip install -r requirement.txt`
 2. `uvicorn server:get_app --reload`
 3. 브라우저에서 `http://127.0.0.1:8000` 접속 후 번역 테스트
+
+필수 환경 준비
+---------------
+
+1. Python 패키지: `pip install -r requirement.txt`
+   - `pydub` 사용을 위해 시스템에 FFmpeg가 설치되어야 합니다. (예: `sudo apt install ffmpeg`)
+2. PyTorch: GPU 환경에 맞춰 사전 설치 (`pip install torch torchvision torchaudio ...`).
+3. Jetson 보드에서 Ollama Docker가 192.168.55.1:11434에서 동작하는지 확인합니다.
+
+Coqui XTTS v2 낭독 기능 설치
+---------------------------
+
+1. 필요한 시스템 패키지 설치 (Ubuntu 예시)
+   ```bash
+   sudo apt update
+   sudo apt install build-essential python3-dev libsndfile1 ffmpeg
+   ```
+2. Python 3.9~3.11 버전의 가상환경을 준비합니다. (PyTorch/Coqui TTS는 Python 3.12 이상을 지원하지 않습니다.)
+   ```bash
+   # 예) pyenv
+   pyenv install 3.11.9
+   pyenv virtualenv 3.11.9 xtts-env
+   pyenv activate xtts-env
+   ```
+3. PyTorch 설치 (CUDA/CPU 환경에 맞춰 알맞은 wheel 선택)
+   ```bash
+   pip install torch torchvision torchaudio
+   ```
+4. Coqui XTTS 의존성 설치
+   ```bash
+   pip install pydub
+   pip install git+https://github.com/coqui-ai/TTS
+   ```
+5. 설치 확인
+   ```bash
+   python -m TTS --text "Hello"
+   ```

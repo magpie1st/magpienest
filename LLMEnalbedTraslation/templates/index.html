@@ -141,6 +141,33 @@
         </div>
       </section>
 
+      <section class="tts" id="ttsSection">
+        <h2>영어 원문 낭독 (Coqui XTTS v2)</h2>
+        <p class="hint">원문 영어 텍스트를 Coqui XTTS v2 모델로 낭독합니다. 기본 언어는 영어입니다.</p>
+        <div class="tts-controls">
+          <label for="ttsSpeaker">Speaker</label>
+          <input
+            id="ttsSpeaker"
+            type="text"
+            placeholder="선택 사항: en_speaker_6"
+            title="XTTS 사전 학습 화자 이름 (비워두면 기본 화자를 사용합니다)"
+          />
+          <button id="ttsSpeakBtn" type="button">낭독 실행</button>
+          <button id="ttsStopBtn" type="button" disabled>정지</button>
+          <button id="ttsSaveBtn" type="button" disabled>저장</button>
+        </div>
+        <div class="tts-status" id="ttsStatusPanel" hidden>
+          <p id="ttsStatusMessage"></p>
+          <div class="progress" id="ttsProgressWrapper" hidden>
+            <div class="progress-bar">
+              <div id="ttsProgressFill" class="progress-fill"></div>
+            </div>
+            <span id="ttsProgressLabel">0%</span>
+          </div>
+        </div>
+        <audio id="ttsAudio" controls hidden></audio>
+      </section>
+
       <section class="status" id="statusPanel" hidden>
         <p id="statusMessage"></p>
         <div id="progressWrapper" class="progress" hidden>
@@ -195,7 +222,21 @@
       const progressFill = document.getElementById("progressFill");
       const progressLabel = document.getElementById("progressLabel");
 
+      const ttsSpeakBtn = document.getElementById("ttsSpeakBtn");
+      const ttsStopBtn = document.getElementById("ttsStopBtn");
+      const ttsSaveBtn = document.getElementById("ttsSaveBtn");
+      const ttsSpeakerInput = document.getElementById("ttsSpeaker");
+      const ttsStatusPanel = document.getElementById("ttsStatusPanel");
+      const ttsStatusMessage = document.getElementById("ttsStatusMessage");
+      const ttsProgressWrapper = document.getElementById("ttsProgressWrapper");
+      const ttsProgressFill = document.getElementById("ttsProgressFill");
+      const ttsProgressLabel = document.getElementById("ttsProgressLabel");
+      const ttsAudio = document.getElementById("ttsAudio");
+
       let currentController = null;
+      let currentTtsController = null;
+      let lastTtsBlob = null;
+      let lastTtsUrl = null;
 
       function showStatus(message, isError = false, isLoading = false) {
         statusMessage.textContent = message;
@@ -218,6 +259,53 @@
         const clamped = Math.max(0, Math.min(100, percent));
         progressFill.style.width = `${clamped}%`;
         progressLabel.textContent = `${clamped}%`;
+      }
+
+      function showTtsStatus(message, isError = false, isLoading = false) {
+        ttsStatusMessage.textContent = message;
+        ttsStatusPanel.hidden = false;
+        ttsStatusPanel.classList.toggle("error", isError);
+        ttsStatusPanel.classList.toggle("loading", isLoading);
+        if (!message) {
+          ttsStatusPanel.hidden = true;
+          ttsStatusPanel.classList.remove("error", "loading");
+        }
+      }
+
+      function resetTtsProgress() {
+        ttsProgressWrapper.hidden = true;
+        ttsProgressFill.style.width = "0%";
+        ttsProgressLabel.textContent = "0%";
+      }
+
+      function updateTtsProgress(percent) {
+        ttsProgressWrapper.hidden = false;
+        const clamped = Math.max(0, Math.min(100, percent));
+        ttsProgressFill.style.width = `${clamped}%`;
+        ttsProgressLabel.textContent = `${clamped}%`;
+      }
+
+      function applyTtsAudio(blob) {
+        if (lastTtsUrl) {
+          URL.revokeObjectURL(lastTtsUrl);
+          lastTtsUrl = null;
+        }
+        lastTtsBlob = blob || null;
+        if (!blob) {
+          ttsAudio.pause();
+          ttsAudio.src = "";
+          ttsAudio.hidden = true;
+          ttsSaveBtn.disabled = true;
+          return;
+        }
+        lastTtsUrl = URL.createObjectURL(blob);
+        ttsAudio.src = lastTtsUrl;
+        ttsAudio.hidden = false;
+        ttsSaveBtn.disabled = false;
+      }
+
+      function clearTtsAudio() {
+        applyTtsAudio(null);
       }
 
       function parsePort(value) {
@@ -401,6 +489,17 @@
         sourceText.value = "";
         translatedText.value = "";
         showStatus("", false);
+        resetProgress();
+        if (currentTtsController) {
+          currentTtsController.abort();
+          currentTtsController = null;
+        }
+        clearTtsAudio();
+        resetTtsProgress();
+        showTtsStatus("", false);
+        ttsStopBtn.disabled = true;
+        ttsSpeakBtn.disabled = false;
+        ttsSpeakerInput.value = "";
       });
 
       stopBtn.addEventListener("click", () => {
@@ -411,6 +510,93 @@
           translateBtn.disabled = false;
           showStatus("번역 중지를 요청했습니다.");
         }
+      });
+
+      ttsSpeakBtn.addEventListener("click", async () => {
+        const text = sourceText.value.trim();
+        if (!text) {
+          showTtsStatus("영어 텍스트를 입력해 주세요.", true);
+          return;
+        }
+
+        try {
+          if (currentTtsController) {
+            currentTtsController.abort();
+          }
+          const controller = new AbortController();
+          currentTtsController = controller;
+          ttsSpeakBtn.disabled = true;
+          ttsStopBtn.disabled = false;
+          ttsSaveBtn.disabled = true;
+          showTtsStatus("낭독을 준비 중입니다...", false, true);
+          resetTtsProgress();
+          clearTtsAudio();
+
+          const speaker = ttsSpeakerInput.value.trim();
+
+          const res = await fetch("/api/tts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              text,
+              language: "en",
+              speaker: speaker || undefined,
+            }),
+            signal: controller.signal,
+          });
+
+          const supportsStream = res.body && typeof res.body.getReader === "function";
+          if (supportsStream) {
+            await handleTtsStreamingResponse(res);
+          } else {
+            await handleTtsBufferedProgress(res);
+          }
+        } catch (error) {
+          if (error && error.name === "AbortError") {
+            showTtsStatus("낭독을 중지했습니다.");
+            resetTtsProgress();
+          } else {
+            showTtsStatus((error && error.message) || "낭독에 실패했습니다.", true);
+            resetTtsProgress();
+            clearTtsAudio();
+          }
+        } finally {
+          if (currentTtsController) {
+            currentTtsController = null;
+          }
+          ttsSpeakBtn.disabled = false;
+          ttsStopBtn.disabled = true;
+          if (!lastTtsBlob) {
+            ttsSaveBtn.disabled = true;
+          }
+        }
+      });
+
+      ttsStopBtn.addEventListener("click", () => {
+        if (currentTtsController) {
+          currentTtsController.abort();
+          currentTtsController = null;
+          ttsSpeakBtn.disabled = false;
+          ttsStopBtn.disabled = true;
+          resetTtsProgress();
+          showTtsStatus("낭독을 중지했습니다.");
+        }
+      });
+
+      ttsSaveBtn.addEventListener("click", () => {
+        if (!lastTtsBlob) {
+          return;
+        }
+        if (!lastTtsUrl) {
+          lastTtsUrl = URL.createObjectURL(lastTtsBlob);
+        }
+        const link = document.createElement("a");
+        link.href = lastTtsUrl;
+        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+        link.download = `tts-${timestamp}.mp3`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
       });
 
       // Initialise state
@@ -434,6 +620,10 @@
       stripThinkCheckbox.checked = defaultState.stripThink === true || defaultState.stripThink === "true";
       resetProgress();
       stopBtn.disabled = true;
+      resetTtsProgress();
+      showTtsStatus("", false);
+      clearTtsAudio();
+      ttsStopBtn.disabled = true;
 
       async function handleStreamingResponse(response, includeText) {
         if (!response.ok || !response.body) {
@@ -552,6 +742,110 @@
             translatedText.value = "";
             break;
         }
+      }
+
+      async function handleTtsStreamingResponse(response) {
+        if (!response.ok || !response.body) {
+          const data = await response.json().catch(() => ({ detail: "낭독에 실패했습니다." }));
+          throw new Error(data.detail || "낭독에 실패했습니다.");
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let buffer = "";
+
+        const flush = () => {
+          let newlineIndex;
+          while ((newlineIndex = buffer.indexOf("\n")) >= 0) {
+            const line = buffer.slice(0, newlineIndex).trim();
+            buffer = buffer.slice(newlineIndex + 1);
+            if (!line) {
+              continue;
+            }
+            try {
+              const event = JSON.parse(line);
+              handleTtsProgressEvent(event);
+            } catch (err) {
+              console.warn("Invalid TTS progress event", err, line);
+            }
+          }
+        };
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) {
+            break;
+          }
+          buffer += decoder.decode(value, { stream: true });
+          flush();
+        }
+        buffer += decoder.decode();
+        flush();
+      }
+
+      async function handleTtsBufferedProgress(response) {
+        const textData = await response.text();
+        if (!response.ok) {
+          let detail;
+          try {
+            const parsed = JSON.parse(textData);
+            detail = parsed.detail;
+          } catch (err) {
+            detail = textData || "낭독에 실패했습니다.";
+          }
+          throw new Error(detail || "낭독에 실패했습니다.");
+        }
+
+        textData
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .forEach((line) => {
+            try {
+              const event = JSON.parse(line);
+              handleTtsProgressEvent(event);
+            } catch (err) {
+              console.warn("Invalid TTS progress event", err, line);
+            }
+          });
+      }
+
+      function handleTtsProgressEvent(event) {
+        switch (event.type) {
+          case "meta":
+            showTtsStatus("낭독을 준비 중입니다...", false, true);
+            resetTtsProgress();
+            break;
+          case "progress":
+            if (typeof event.percent === "number") {
+              updateTtsProgress(event.percent);
+            }
+            showTtsStatus(event.message || "낭독 중...", false, true);
+            break;
+          case "done":
+            updateTtsProgress(event.percent ?? 100);
+            showTtsStatus("낭독이 완료되었습니다.");
+            if (event.audio_base64) {
+              const blob = decodeBase64Audio(event.audio_base64, event.mime || "audio/mpeg");
+              applyTtsAudio(blob);
+            }
+            break;
+          case "error":
+            resetTtsProgress();
+            showTtsStatus(event.message || "낭독에 실패했습니다.", true);
+            applyTtsAudio(null);
+            break;
+        }
+      }
+
+      function decodeBase64Audio(base64, mime) {
+        const binary = atob(base64);
+        const length = binary.length;
+        const bytes = new Uint8Array(length);
+        for (let i = 0; i < length; i += 1) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        return new Blob([bytes], { type: mime || "audio/mpeg" });
       }
     </script>
   </body>

@@ -6,6 +6,7 @@
 - Jetson 연결 정보(host/port) 설정 및 연결 테스트
 - qwen 시리즈 등의 Ollama 모델을 선택해 번역 수행
 - Temperature·Stream 플래그·프롬프트 템플릿·요청 타임아웃·Progress 스트리밍을 런타임에 조정
+- Coqui XTTS v2 기반 영어 원문 낭독(TTS)·진행률 표시·MP3 저장 지원
 - 좌측 영어 입력, 우측 번역 결과 확인
 - FastAPI 백엔드 + Jinja2 템플릿 기반 UI
 
@@ -26,3 +27,11 @@ uvicorn server:get_app --reload
 - LLM이 `<think>...</think>` 메타 설명을 반환할 때는 Strip `<think>` 옵션을 켜서 결과에서 제거할 수 있습니다.
 - 네트워크 환경에 따라 Timeout(sec) 값을 늘려 긴 응답을 기다릴 수 있습니다.
 - Hugging Face `tokenizers` 라이브러리와 Qwen 토크나이저 JSON 경로를 `QWEN_TOKENIZER_PATH` 환경변수에 지정하면 더 정확한 토큰 길이 추정이 가능합니다. 지정하지 않으면 문자/단어 기반의 근사치를 사용합니다.
+
+## 영어 낭독(Coqui XTTS v2)
+
+- `CoquiTTSService`는 `tts_models/multilingual/multi-dataset/xtts_v2` 모델을 사용하며 첫 실행 시 모델 파일을 다운로드합니다.
+- Coqui XTTS는 별도 설치가 필요합니다. `pip install git+https://github.com/coqui-ai/TTS` 또는 호환 가능한 리눅스 패키지를 설치한 뒤, requirements의 `pydub`과 함께 사용하세요. (FFmpeg도 필요함)
+- 낭독 실행 시 진행률이 표시되고 완료되면 브라우저에서 곧바로 재생하거나 MP3 파일로 저장할 수 있습니다.
+- `pydub`이 MP3 변환에 사용되므로 시스템에 FFmpeg가 설치되어 있어야 합니다. (예: `sudo apt install ffmpeg`)
+- 필요한 경우 `speaker_wav` 옵션을 통해 사전 녹음된 화자 음성(파일 경로)을 지정해 보이스 클로닝을 활용할 수 있습니다.

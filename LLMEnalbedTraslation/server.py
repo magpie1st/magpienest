@@ -22,10 +22,12 @@ if __package__ is None or __package__ == "":
     from client import OllamaClientError  # type: ignore
     from config import DEFAULT_JETSON_CONFIG  # type: ignore
     from translator import PROMPT_TEMPLATE, TranslationService  # type: ignore
+    from tts import CoquiTTSService  # type: ignore
 else:
     from .client import OllamaClientError
     from .config import DEFAULT_JETSON_CONFIG
     from .translator import PROMPT_TEMPLATE, TranslationService
+    from .tts import CoquiTTSService
 
 ROOT_DIR = Path(__file__).resolve().parent
 TEMPLATE_DIR = ROOT_DIR / "templates"
@@ -35,6 +37,7 @@ app = FastAPI(title="LLM Enabled Translation")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 templates = Jinja2Templates(directory=str(TEMPLATE_DIR))
 service = TranslationService()
+tts_service = CoquiTTSService()
 
 
 class TranslateRequest(BaseModel):
@@ -84,6 +87,16 @@ class ConnectionRequest(BaseModel):
     port: Optional[int] = Field(None, ge=1, le=65535)
     extra_models: Optional[List[str]] = Field(None, description="Optional extra models to merge")
     timeout: Optional[int] = Field(None, ge=10, le=600)
+
+
+class TTSRequest(BaseModel):
+    text: str = Field(..., description="English text to narrate")
+    language: Optional[str] = Field(None, description="Language code supported by XTTS (default en)")
+    speaker_wav: Optional[str] = Field(
+        None,
+        description="Optional filesystem path to a reference audio file for voice cloning",
+    )
+    speaker: Optional[str] = Field(None, description="Speaker name for multi-speaker models (e.g. en_speaker_6)")
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -212,6 +225,50 @@ def _translate_with_progress(payload: TranslateRequest) -> StreamingResponse:
             translation = "\n\n".join(part for part in aggregated if part).strip()
             yield json.dumps({"type": "done", "translation": translation}, ensure_ascii=False) + "\n"
         except OllamaClientError as exc:
+            yield json.dumps({"type": "error", "message": str(exc)}, ensure_ascii=False) + "\n"
+
+    return StreamingResponse(event_stream(), media_type="application/x-ndjson")
+
+
+@app.post("/api/tts")
+def synthesize_tts(payload: TTSRequest = Body(...)) -> StreamingResponse:
+    def event_stream() -> Iterable[str]:
+        import json
+
+        text = (payload.text or "").strip()
+        if not text:
+            raise HTTPException(status_code=400, detail="낭독할 영어 문장을 입력해 주세요.")
+
+        try:
+            yield json.dumps({"type": "meta", "total": 100}, ensure_ascii=False) + "\n"
+            yield json.dumps(
+                {"type": "progress", "percent": 15, "message": "모델 준비 중..."}, ensure_ascii=False
+            ) + "\n"
+
+            audio_bytes = tts_service.synthesize_to_mp3(
+                text,
+                language=payload.language or "en",
+                speaker_wav=payload.speaker_wav,
+                speaker=payload.speaker,
+            )
+
+            yield json.dumps(
+                {"type": "progress", "percent": 80, "message": "MP3 변환 중..."}, ensure_ascii=False
+            ) + "\n"
+
+            encoded = tts_service.encode_base64(audio_bytes)
+            yield json.dumps(
+                {
+                    "type": "done",
+                    "percent": 100,
+                    "audio_base64": encoded,
+                    "mime": "audio/mpeg",
+                },
+                ensure_ascii=False,
+            ) + "\n"
+        except HTTPException:
+            raise
+        except Exception as exc:  # pragma: no cover - runtime error path
             yield json.dumps({"type": "error", "message": str(exc)}, ensure_ascii=False) + "\n"
 
     return StreamingResponse(event_stream(), media_type="application/x-ndjson")
