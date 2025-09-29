@@ -145,6 +145,13 @@
         <h2>영어 원문 낭독 (Coqui XTTS v2)</h2>
         <p class="hint">원문 영어 텍스트를 Coqui XTTS v2 모델로 낭독합니다. 기본 언어는 영어입니다.</p>
         <div class="tts-controls">
+          <label for="ttsSpeaker">Speaker</label>
+          <input
+            id="ttsSpeaker"
+            type="text"
+            placeholder="선택 사항: en_speaker_6"
+            title="XTTS 사전 학습 화자 이름 (비워두면 기본 화자를 사용합니다)"
+          />
           <button id="ttsSpeakBtn" type="button">낭독 실행</button>
           <button id="ttsStopBtn" type="button" disabled>정지</button>
           <button id="ttsSaveBtn" type="button" disabled>저장</button>
@@ -218,6 +225,7 @@
       const ttsSpeakBtn = document.getElementById("ttsSpeakBtn");
       const ttsStopBtn = document.getElementById("ttsStopBtn");
       const ttsSaveBtn = document.getElementById("ttsSaveBtn");
+      const ttsSpeakerInput = document.getElementById("ttsSpeaker");
       const ttsStatusPanel = document.getElementById("ttsStatusPanel");
       const ttsStatusMessage = document.getElementById("ttsStatusMessage");
       const ttsProgressWrapper = document.getElementById("ttsProgressWrapper");
@@ -491,6 +499,7 @@
         showTtsStatus("", false);
         ttsStopBtn.disabled = true;
         ttsSpeakBtn.disabled = false;
+        ttsSpeakerInput.value = "";
       });
 
       stopBtn.addEventListener("click", () => {
@@ -523,12 +532,15 @@
           resetTtsProgress();
           clearTtsAudio();
 
+          const speaker = ttsSpeakerInput.value.trim();
+
           const res = await fetch("/api/tts", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               text,
               language: "en",
+              speaker: speaker || undefined,
             }),
             signal: controller.signal,
           });

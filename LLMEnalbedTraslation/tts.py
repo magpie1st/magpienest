@@ -12,11 +12,13 @@ from pydub import AudioSegment
 try:
     from TTS.api import TTS  # type: ignore
     from TTS.tts.configs.xtts_config import XttsConfig  # type: ignore
-    from TTS.tts.models.xtts import XttsAudioConfig  # type: ignore
-    try:  # Register XTTS config class for torch.load when weights_only=True (PyTorch >= 2.6)
+    from TTS.tts.models.xtts import XttsAudioConfig, XttsArgs  # type: ignore
+    from TTS.config.shared_configs import BaseDatasetConfig  # type: ignore
+
+    try:  # Register XTTS-related config classes for torch.load when weights_only=True (PyTorch >= 2.6)
         from torch.serialization import add_safe_globals
 
-        add_safe_globals([XttsConfig, XttsAudioConfig])
+        add_safe_globals([XttsConfig, XttsAudioConfig, XttsArgs, BaseDatasetConfig])
     except Exception:
         pass  # Older torch versions or failures fall back to default behaviour
 except Exception as exc:  # pragma: no cover - optional dependency load
@@ -47,12 +49,49 @@ class CoquiTTSService:
         if self._tts is None:
             self._tts = TTS(model_name=self._model_name, gpu=self._use_cuda)
 
+    def _available_speakers(self) -> list[str]:
+        self._ensure_model()
+        speakers = []
+        if not self._tts:
+            return speakers
+
+        attr = getattr(self._tts, "speakers", None)
+        if isinstance(attr, dict):
+            speakers.extend(attr.keys())
+        elif isinstance(attr, (list, tuple)):
+            speakers.extend(attr)
+
+        manager = getattr(self._tts, "speaker_manager", None)
+        if manager is not None:
+            names = getattr(manager, "speaker_names", None)
+            if isinstance(names, (list, tuple)):
+                speakers.extend(names)
+
+        seen = set()
+        unique: list[str] = []
+        for name in speakers:
+            if not isinstance(name, str):
+                continue
+            if name not in seen:
+                seen.add(name)
+                unique.append(name)
+        return unique
+
+    def _resolve_speaker(self, requested: Optional[str], speaker_wav: Optional[str]) -> Optional[str]:
+        if speaker_wav:
+            return None  # XTTS will derive speaker embedding from wav
+        if requested:
+            return requested
+        speakers = self._available_speakers()
+        return speakers[0] if speakers else None
+
     def synthesize_to_mp3(
         self,
         text: str,
         *,
         language: str = DEFAULT_LANGUAGE,
         speaker_wav: Optional[str] = None,
+        speaker: Optional[str] = None,
         progress_callbacks: Optional[Iterable[Callable[[], None]]] = None,
     ) -> bytes:
         """Generate MP3 audio for the supplied text.
@@ -80,14 +119,21 @@ class CoquiTTSService:
                     pass
 
         _notify(0)  # loading start
+        resolved_speaker = self._resolve_speaker(speaker, speaker_wav)
+
         with tempfile.TemporaryDirectory(prefix="xtts_") as tmpdir:
             tmp_wav = Path(tmpdir) / "output.wav"
-            self._tts.tts_to_file(
-                text=text,
-                file_path=str(tmp_wav),
-                speaker_wav=speaker_wav,
-                language=language,
-            )
+            tts_kwargs = {
+                "text": text,
+                "file_path": str(tmp_wav),
+                "language": language,
+            }
+            if speaker_wav:
+                tts_kwargs["speaker_wav"] = speaker_wav
+            if resolved_speaker:
+                tts_kwargs["speaker"] = resolved_speaker
+
+            self._tts.tts_to_file(**tts_kwargs)
             _notify(1)  # synthesis complete
             audio = AudioSegment.from_file(tmp_wav, format="wav")
             mp3_path = Path(tmpdir) / "output.mp3"

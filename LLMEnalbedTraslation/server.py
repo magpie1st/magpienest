@@ -96,6 +96,7 @@ class TTSRequest(BaseModel):
         None,
         description="Optional filesystem path to a reference audio file for voice cloning",
     )
+    speaker: Optional[str] = Field(None, description="Speaker name for multi-speaker models (e.g. en_speaker_6)")
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -248,6 +249,7 @@ def synthesize_tts(payload: TTSRequest = Body(...)) -> StreamingResponse:
                 text,
                 language=payload.language or "en",
                 speaker_wav=payload.speaker_wav,
+                speaker=payload.speaker,
             )
 
             yield json.dumps(
