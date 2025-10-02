@@ -1,0 +1,542 @@
+qt.core.library: "pipewire-0.3" loaded library
+2025-10-01 20:03:21,770 [INFO] audiobook.core.audio: Configured ffmpeg converter: /usr/bin/ffmpeg
+2025-10-01 20:03:30,330 [INFO] audiobook.core.audio: Configured ffmpeg converter: /usr/bin/ffmpeg
+2025-10-01 20:03:30,331 [INFO] __main__: Starting Audiobook GUI
+qt.core.plugin.factoryloader: checking directory path "/home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/platforms" ...
+qt.core.plugin.factoryloader: looking at "libqwayland-generic.so"
+qt.core.plugin.loader: Found metadata in lib /home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/platforms/libqwayland-generic.so, metadata=
+{
+    "IID": "org.qt-project.Qt.QPA.QPlatformIntegrationFactoryInterface.5.3",
+    "MetaData": {
+        "Keys": [
+            "wayland"
+        ]
+    },
+    "archlevel": 1,
+    "className": "QWaylandIntegrationPlugin",
+    "debug": false,
+    "version": 395520
+}
+
+
+qt.core.plugin.factoryloader: Got keys from plugin meta data QList("wayland")
+qt.core.plugin.factoryloader: looking at "libqxcb.so"
+qt.core.plugin.loader: Found metadata in lib /home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/platforms/libqxcb.so, metadata=
+{
+    "IID": "org.qt-project.Qt.QPA.QPlatformIntegrationFactoryInterface.5.3",
+    "MetaData": {
+        "Keys": [
+            "xcb"
+        ]
+    },
+    "archlevel": 1,
+    "className": "QXcbIntegrationPlugin",
+    "debug": false,
+    "version": 395520
+}
+
+
+qt.core.plugin.factoryloader: Got keys from plugin meta data QList("xcb")
+qt.core.plugin.factoryloader: looking at "libqlinuxfb.so"
+qt.core.plugin.loader: Found metadata in lib /home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/platforms/libqlinuxfb.so, metadata=
+{
+    "IID": "org.qt-project.Qt.QPA.QPlatformIntegrationFactoryInterface.5.3",
+    "MetaData": {
+        "Keys": [
+            "linuxfb"
+        ]
+    },
+    "archlevel": 1,
+    "className": "QLinuxFbIntegrationPlugin",
+    "debug": false,
+    "version": 395520
+}
+
+
+qt.core.plugin.factoryloader: Got keys from plugin meta data QList("linuxfb")
+qt.core.plugin.factoryloader: looking at "libqminimalegl.so"
+qt.core.plugin.loader: Found metadata in lib /home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/platforms/libqminimalegl.so, metadata=
+{
+    "IID": "org.qt-project.Qt.QPA.QPlatformIntegrationFactoryInterface.5.3",
+    "MetaData": {
+        "Keys": [
+            "minimalegl"
+        ]
+    },
+    "archlevel": 1,
+    "className": "QMinimalEglIntegrationPlugin",
+    "debug": false,
+    "version": 395520
+}
+
+
+qt.core.plugin.factoryloader: Got keys from plugin meta data QList("minimalegl")
+qt.core.plugin.factoryloader: looking at "libqwayland-egl.so"
+qt.core.plugin.loader: Found metadata in lib /home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/platforms/libqwayland-egl.so, metadata=
+{
+    "IID": "org.qt-project.Qt.QPA.QPlatformIntegrationFactoryInterface.5.3",
+    "MetaData": {
+        "Keys": [
+            "wayland-egl"
+        ]
+    },
+    "archlevel": 1,
+    "className": "QWaylandEglPlatformIntegrationPlugin",
+    "debug": false,
+    "version": 395520
+}
+
+
+qt.core.plugin.factoryloader: Got keys from plugin meta data QList("wayland-egl")
+qt.core.plugin.factoryloader: looking at "libqminimal.so"
+qt.core.plugin.loader: Found metadata in lib /home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/platforms/libqminimal.so, metadata=
+{
+    "IID": "org.qt-project.Qt.QPA.QPlatformIntegrationFactoryInterface.5.3",
+    "MetaData": {
+        "Keys": [
+            "minimal"
+        ]
+    },
+    "archlevel": 1,
+    "className": "QMinimalIntegrationPlugin",
+    "debug": false,
+    "version": 395520
+}
+
+
+qt.core.plugin.factoryloader: Got keys from plugin meta data QList("minimal")
+qt.core.plugin.factoryloader: looking at "libqvnc.so"
+qt.core.plugin.loader: Found metadata in lib /home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/platforms/libqvnc.so, metadata=
+{
+    "IID": "org.qt-project.Qt.QPA.QPlatformIntegrationFactoryInterface.5.3",
+    "MetaData": {
+        "Keys": [
+            "vnc"
+        ]
+    },
+    "archlevel": 1,
+    "className": "QVncIntegrationPlugin",
+    "debug": false,
+    "version": 395520
+}
+
+
+qt.core.plugin.factoryloader: Got keys from plugin meta data QList("vnc")
+qt.core.plugin.factoryloader: looking at "libqeglfs.so"
+qt.core.plugin.loader: Found metadata in lib /home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/platforms/libqeglfs.so, metadata=
+{
+    "IID": "org.qt-project.Qt.QPA.QPlatformIntegrationFactoryInterface.5.3",
+    "MetaData": {
+        "Keys": [
+            "eglfs"
+        ]
+    },
+    "archlevel": 1,
+    "className": "QEglFSIntegrationPlugin",
+    "debug": false,
+    "version": 395520
+}
+
+
+qt.core.plugin.factoryloader: Got keys from plugin meta data QList("eglfs")
+qt.core.plugin.factoryloader: looking at "libqoffscreen.so"
+qt.core.plugin.loader: Found metadata in lib /home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/platforms/libqoffscreen.so, metadata=
+{
+    "IID": "org.qt-project.Qt.QPA.QPlatformIntegrationFactoryInterface.5.3",
+    "MetaData": {
+        "Keys": [
+            "offscreen"
+        ]
+    },
+    "archlevel": 1,
+    "className": "QOffscreenIntegrationPlugin",
+    "debug": false,
+    "version": 395520
+}
+
+
+qt.core.plugin.factoryloader: Got keys from plugin meta data QList("offscreen")
+qt.core.plugin.factoryloader: looking at "libqvkkhrdisplay.so"
+qt.core.plugin.loader: Found metadata in lib /home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/platforms/libqvkkhrdisplay.so, metadata=
+{
+    "IID": "org.qt-project.Qt.QPA.QPlatformIntegrationFactoryInterface.5.3",
+    "MetaData": {
+        "Keys": [
+            "vkkhrdisplay"
+        ]
+    },
+    "archlevel": 1,
+    "className": "QVkKhrDisplayIntegrationPlugin",
+    "debug": false,
+    "version": 395520
+}
+
+
+qt.core.plugin.factoryloader: Got keys from plugin meta data QList("vkkhrdisplay")
+qt.core.plugin.factoryloader: checking directory path "/home/magpie/.pyenv/versions/3.11.9/bin/platforms" ...
+qt.core.library: "/home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/platforms/libqxcb.so" loaded library
+qt.core.plugin.factoryloader: checking directory path "/home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/platformthemes" ...
+qt.core.plugin.factoryloader: looking at "libqgtk3.so"
+qt.core.plugin.loader: Found metadata in lib /home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/platformthemes/libqgtk3.so, metadata=
+{
+    "IID": "org.qt-project.Qt.QPA.QPlatformThemeFactoryInterface.5.1",
+    "MetaData": {
+        "Keys": [
+            "gtk3"
+        ]
+    },
+    "archlevel": 1,
+    "className": "QGtk3ThemePlugin",
+    "debug": false,
+    "version": 395520
+}
+
+
+qt.core.plugin.factoryloader: Got keys from plugin meta data QList("gtk3")
+qt.core.plugin.factoryloader: looking at "libqxdgdesktopportal.so"
+qt.core.plugin.loader: Found metadata in lib /home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/platformthemes/libqxdgdesktopportal.so, metadata=
+{
+    "IID": "org.qt-project.Qt.QPA.QPlatformThemeFactoryInterface.5.1",
+    "MetaData": {
+        "Keys": [
+            "xdgdesktopportal",
+            "flatpak",
+            "snap"
+        ]
+    },
+    "archlevel": 1,
+    "className": "QXdgDesktopPortalThemePlugin",
+    "debug": false,
+    "version": 395520
+}
+
+
+qt.core.plugin.factoryloader: Got keys from plugin meta data QList("xdgdesktopportal", "flatpak", "snap")
+qt.core.plugin.factoryloader: checking directory path "/home/magpie/.pyenv/versions/3.11.9/bin/platformthemes" ...
+qt.core.library: "/home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/platformthemes/libqgtk3.so" loaded library
+qt.core.plugin.factoryloader: checking directory path "/home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/platforminputcontexts" ...
+qt.core.plugin.factoryloader: looking at "libcomposeplatforminputcontextplugin.so"
+qt.core.plugin.loader: Found metadata in lib /home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/platforminputcontexts/libcomposeplatforminputcontextplugin.so, metadata=
+{
+    "IID": "org.qt-project.Qt.QPlatformInputContextFactoryInterface.5.1",
+    "MetaData": {
+        "Keys": [
+            "compose",
+            "xim"
+        ]
+    },
+    "archlevel": 1,
+    "className": "QComposePlatformInputContextPlugin",
+    "debug": false,
+    "version": 395520
+}
+
+
+qt.core.plugin.factoryloader: Got keys from plugin meta data QList("compose", "xim")
+qt.core.plugin.factoryloader: looking at "libibusplatforminputcontextplugin.so"
+qt.core.plugin.loader: Found metadata in lib /home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/platforminputcontexts/libibusplatforminputcontextplugin.so, metadata=
+{
+    "IID": "org.qt-project.Qt.QPlatformInputContextFactoryInterface.5.1",
+    "MetaData": {
+        "Keys": [
+            "ibus"
+        ]
+    },
+    "archlevel": 1,
+    "className": "QIbusPlatformInputContextPlugin",
+    "debug": false,
+    "version": 395520
+}
+
+
+qt.core.plugin.factoryloader: Got keys from plugin meta data QList("ibus")
+qt.core.plugin.factoryloader: looking at "libqtvirtualkeyboardplugin.so"
+qt.core.plugin.loader: Found metadata in lib /home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/platforminputcontexts/libqtvirtualkeyboardplugin.so, metadata=
+{
+    "IID": "org.qt-project.Qt.QPlatformInputContextFactoryInterface.5.1",
+    "MetaData": {
+        "Keys": [
+            "qtvirtualkeyboard"
+        ]
+    },
+    "archlevel": 1,
+    "className": "QVirtualKeyboardPlugin",
+    "debug": false,
+    "version": 395520
+}
+
+
+qt.core.plugin.factoryloader: Got keys from plugin meta data QList("qtvirtualkeyboard")
+qt.core.plugin.factoryloader: checking directory path "/home/magpie/.pyenv/versions/3.11.9/bin/platforminputcontexts" ...
+qt.core.library: "/home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/platforminputcontexts/libcomposeplatforminputcontextplugin.so" loaded library
+qt.core.plugin.factoryloader: checking directory path "/home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/styles" ...
+qt.core.plugin.factoryloader: checking directory path "/home/magpie/.pyenv/versions/3.11.9/bin/styles" ...
+2025-10-01 20:03:30,420 [INFO] audiobook.app_gui.main_window: MainWindow init: begin
+2025-10-01 20:03:30,420 [WARNING] audiobook.app_gui.main_window: MainWindow init: media components disabled via env
+2025-10-01 20:03:30,420 [INFO] audiobook.app_gui.main_window: MainWindow init: setting up menu
+qt.core.plugin.factoryloader: checking directory path "/home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/iconengines" ...
+qt.core.plugin.factoryloader: looking at "libqsvgicon.so"
+qt.core.plugin.loader: Found metadata in lib /home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/iconengines/libqsvgicon.so, metadata=
+{
+    "IID": "org.qt-project.Qt.QIconEngineFactoryInterface",
+    "MetaData": {
+        "Keys": [
+            "svg",
+            "svgz",
+            "svg.gz"
+        ]
+    },
+    "archlevel": 1,
+    "className": "QSvgIconPlugin",
+    "debug": false,
+    "version": 395520
+}
+
+
+qt.core.plugin.factoryloader: Got keys from plugin meta data QList("svg", "svgz", "svg.gz")
+qt.core.plugin.factoryloader: checking directory path "/home/magpie/.pyenv/versions/3.11.9/bin/iconengines" ...
+qt.core.plugin.factoryloader: checking directory path "/home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/imageformats" ...
+qt.core.plugin.factoryloader: looking at "libqtiff.so"
+qt.core.plugin.loader: Found metadata in lib /home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/imageformats/libqtiff.so, metadata=
+{
+    "IID": "org.qt-project.Qt.QImageIOHandlerFactoryInterface",
+    "MetaData": {
+        "Keys": [
+            "tiff",
+            "tif"
+        ],
+        "MimeTypes": [
+            "image/tiff",
+            "image/tiff"
+        ]
+    },
+    "archlevel": 1,
+    "className": "QTiffPlugin",
+    "debug": false,
+    "version": 395520
+}
+
+
+qt.core.plugin.factoryloader: Got keys from plugin meta data QList("tiff", "tif")
+qt.core.plugin.factoryloader: looking at "libqpdf.so"
+qt.core.plugin.loader: Found metadata in lib /home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/imageformats/libqpdf.so, metadata=
+{
+    "IID": "org.qt-project.Qt.QImageIOHandlerFactoryInterface",
+    "MetaData": {
+        "Keys": [
+            "pdf"
+        ],
+        "MimeTypes": [
+            "application/pdf"
+        ]
+    },
+    "archlevel": 1,
+    "className": "QPdfPlugin",
+    "debug": false,
+    "version": 395520
+}
+
+
+qt.core.plugin.factoryloader: Got keys from plugin meta data QList("pdf")
+qt.core.plugin.factoryloader: looking at "libqjpeg.so"
+qt.core.plugin.loader: Found metadata in lib /home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/imageformats/libqjpeg.so, metadata=
+{
+    "IID": "org.qt-project.Qt.QImageIOHandlerFactoryInterface",
+    "MetaData": {
+        "Keys": [
+            "jpg",
+            "jpeg",
+            "jfif"
+        ],
+        "MimeTypes": [
+            "image/jpeg",
+            "image/jpeg",
+            "image/jpeg"
+        ]
+    },
+    "archlevel": 1,
+    "className": "QJpegPlugin",
+    "debug": false,
+    "version": 395520
+}
+
+
+qt.core.plugin.factoryloader: Got keys from plugin meta data QList("jpg", "jpeg", "jfif")
+qt.core.plugin.factoryloader: looking at "libqico.so"
+qt.core.plugin.loader: Found metadata in lib /home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/imageformats/libqico.so, metadata=
+{
+    "IID": "org.qt-project.Qt.QImageIOHandlerFactoryInterface",
+    "MetaData": {
+        "Keys": [
+            "ico",
+            "cur"
+        ],
+        "MimeTypes": [
+            "image/vnd.microsoft.icon",
+            "image/vnd.microsoft.icon"
+        ]
+    },
+    "archlevel": 1,
+    "className": "QICOPlugin",
+    "debug": false,
+    "version": 395520
+}
+
+
+qt.core.plugin.factoryloader: Got keys from plugin meta data QList("ico", "cur")
+qt.core.plugin.factoryloader: looking at "libqwbmp.so"
+qt.core.plugin.loader: Found metadata in lib /home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/imageformats/libqwbmp.so, metadata=
+{
+    "IID": "org.qt-project.Qt.QImageIOHandlerFactoryInterface",
+    "MetaData": {
+        "Keys": [
+            "wbmp"
+        ],
+        "MimeTypes": [
+            "image/vnd.wap.wbmp"
+        ]
+    },
+    "archlevel": 1,
+    "className": "QWbmpPlugin",
+    "debug": false,
+    "version": 395520
+}
+
+
+qt.core.plugin.factoryloader: Got keys from plugin meta data QList("wbmp")
+qt.core.plugin.factoryloader: looking at "libqsvg.so"
+qt.core.plugin.loader: Found metadata in lib /home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/imageformats/libqsvg.so, metadata=
+{
+    "IID": "org.qt-project.Qt.QImageIOHandlerFactoryInterface",
+    "MetaData": {
+        "Keys": [
+            "svg",
+            "svgz"
+        ],
+        "MimeTypes": [
+            "image/svg+xml",
+            "image/svg+xml-compressed"
+        ]
+    },
+    "archlevel": 1,
+    "className": "QSvgPlugin",
+    "debug": false,
+    "version": 395520
+}
+
+
+qt.core.plugin.factoryloader: Got keys from plugin meta data QList("svg", "svgz")
+qt.core.plugin.factoryloader: looking at "libqicns.so"
+qt.core.plugin.loader: Found metadata in lib /home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/imageformats/libqicns.so, metadata=
+{
+    "IID": "org.qt-project.Qt.QImageIOHandlerFactoryInterface",
+    "MetaData": {
+        "Keys": [
+            "icns"
+        ],
+        "MimeTypes": [
+            "image/x-icns"
+        ]
+    },
+    "archlevel": 1,
+    "className": "QICNSPlugin",
+    "debug": false,
+    "version": 395520
+}
+
+
+qt.core.plugin.factoryloader: Got keys from plugin meta data QList("icns")
+qt.core.plugin.factoryloader: looking at "libqwebp.so"
+qt.core.plugin.loader: Found metadata in lib /home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/imageformats/libqwebp.so, metadata=
+{
+    "IID": "org.qt-project.Qt.QImageIOHandlerFactoryInterface",
+    "MetaData": {
+        "Keys": [
+            "webp"
+        ],
+        "MimeTypes": [
+            "image/webp"
+        ]
+    },
+    "archlevel": 1,
+    "className": "QWebpPlugin",
+    "debug": false,
+    "version": 395520
+}
+
+
+qt.core.plugin.factoryloader: Got keys from plugin meta data QList("webp")
+qt.core.plugin.factoryloader: looking at "libqgif.so"
+qt.core.plugin.loader: Found metadata in lib /home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/imageformats/libqgif.so, metadata=
+{
+    "IID": "org.qt-project.Qt.QImageIOHandlerFactoryInterface",
+    "MetaData": {
+        "Keys": [
+            "gif"
+        ],
+        "MimeTypes": [
+            "image/gif"
+        ]
+    },
+    "archlevel": 1,
+    "className": "QGifPlugin",
+    "debug": false,
+    "version": 395520
+}
+
+
+qt.core.plugin.factoryloader: Got keys from plugin meta data QList("gif")
+qt.core.plugin.factoryloader: looking at "libqtga.so"
+qt.core.plugin.loader: Found metadata in lib /home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/imageformats/libqtga.so, metadata=
+{
+    "IID": "org.qt-project.Qt.QImageIOHandlerFactoryInterface",
+    "MetaData": {
+        "Keys": [
+            "tga"
+        ],
+        "MimeTypes": [
+            "image/x-tga"
+        ]
+    },
+    "archlevel": 1,
+    "className": "QTgaPlugin",
+    "debug": false,
+    "version": 395520
+}
+
+
+qt.core.plugin.factoryloader: Got keys from plugin meta data QList("tga")
+qt.core.plugin.factoryloader: checking directory path "/home/magpie/.pyenv/versions/3.11.9/bin/imageformats" ...
+2025-10-01 20:03:30,421 [INFO] audiobook.app_gui.main_window: MainWindow init: creating toolbar
+2025-10-01 20:03:30,424 [INFO] audiobook.app_gui.main_window: MainWindow init: creating TOC panel
+2025-10-01 20:03:30,425 [INFO] audiobook.app_gui.main_window: MainWindow init: creating actions and summary panels
+2025-10-01 20:03:30,432 [INFO] audiobook.app_gui.main_window: MainWindow init: creating reader view
+2025-10-01 20:03:30,432 [INFO] audiobook.app_gui.main_window: MainWindow init: creating status label
+2025-10-01 20:03:30,433 [INFO] audiobook.app_gui.main_window: MainWindow init: creating progress panel
+2025-10-01 20:03:30,433 [INFO] audiobook.app_gui.main_window: MainWindow init: creating audio preview group
+2025-10-01 20:03:30,433 [INFO] audiobook.app_gui.main_window: MainWindow: constructing audio preview group
+2025-10-01 20:03:30,433 [INFO] audiobook.app_gui.main_window: MainWindow: creating waveform widget
+qt.core.plugin.factoryloader: checking directory path "/home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/accessible" ...
+qt.core.plugin.factoryloader: checking directory path "/home/magpie/.pyenv/versions/3.11.9/bin/accessible" ...
+2025-10-01 20:03:30,444 [INFO] audiobook.app_gui.main_window: MainWindow: creating position slider
+2025-10-01 20:03:30,445 [INFO] audiobook.app_gui.main_window: MainWindow init: creating log view
+2025-10-01 20:03:30,445 [INFO] audiobook.app_gui.main_window: MainWindow init: loading default EPUB
+2025-10-01 20:03:30,472 [INFO] audiobook.app_gui.main_window: MainWindow init: complete
+qt.core.plugin.factoryloader: checking directory path "/home/magpie/.pyenv/versions/3.11.9/envs/xtts-env/lib/python3.11/site-packages/PySide6/Qt/plugins/accessiblebridge" ...
+qt.core.plugin.factoryloader: checking directory path "/home/magpie/.pyenv/versions/3.11.9/bin/accessiblebridge" ...
+2025-10-01 20:05:32,072 [INFO] audiobook.app_gui.workers: BookWorker init: chapters=1 out_dir=/home/magpie/Downloads speaker=/home/magpie/Workspace/dev/macGitHub/magpienest/audiobook/my_reader.wav
+2025-10-01 20:05:32,072 [INFO] audiobook.app_gui.main_window: Preparing synthesis: chapters=1 out_dir=/home/magpie/Downloads speaker=/home/magpie/Workspace/dev/macGitHub/magpienest/audiobook/my_reader.wav sync=True
+2025-10-01 20:05:32,073 [WARNING] audiobook.app_gui.main_window: Running synthesis in UI thread (sync mode)
+2025-10-01 20:05:32,073 [INFO] audiobook.app_gui.workers: BookWorker started: title=Hotwife and Cuckold Erotica Short Stories - Caribbean Style Cuckold: An Explicit Cuckolding Short Story chapters=1 output=/home/magpie/Downloads
+2025-10-01 20:05:32,073 [INFO] audiobook.core.pipeline: Starting chapter 1/1: text_part0000
+2025-10-01 20:05:32,074 [INFO] audiobook.core.pipeline: Synthesizing chapter 1: text_part0000 (6 chunks)
+2025-10-01 20:05:32,074 [INFO] audiobook.core.pipeline:   Chunk 1/6…
+2025-10-01 20:05:32,074 [INFO] audiobook.core.tts_engine: Loading TTS model: tts_models/multilingual/multi-dataset/xtts_v2
+2025-10-01 20:05:42,633 [INFO] audiobook.core.tts_engine: Synthesizing line len=38 language=en speaker=True
+/home/magpie/.pyenv/versions/xtts-env/lib/python3.11/site-packages/torchaudio/_backend/utils.py:213: UserWarning: In 2.9, this function's implementation will be changed to use torchaudio.load_with_torchcodec` under the hood. Some parameters like ``normalize``, ``format``, ``buffer_size``, and ``backend`` will be ignored. We recommend that you port your code to rely directly on TorchCodec's decoder instead: https://docs.pytorch.org/torchcodec/stable/generated/torchcodec.decoders.AudioDecoder.html#torchcodec.decoders.AudioDecoder.
+  warnings.warn(
+/home/magpie/.pyenv/versions/xtts-env/lib/python3.11/site-packages/torchaudio/_backend/ffmpeg.py:88: UserWarning: torio.io._streaming_media_decoder.StreamingMediaDecoder has been deprecated. This deprecation is part of a large refactoring effort to transition TorchAudio into a maintenance phase. The decoding and encoding capabilities of PyTorch for both audio and video are being consolidated into TorchCodec. Please see https://github.com/pytorch/audio/issues/3902 for more information. It will be removed from the 2.9 release. 
+  s = torchaudio.io.StreamReader(src, format, None, buffer_size)
+The attention mask is not set and cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
+2025-10-01 20:06:11,914 [INFO] audiobook.core.pipeline:   Chunk 2/6…
+2025-10-01 20:06:11,914 [INFO] audiobook.core.tts_engine: Synthesizing line len=221 language=en speaker=True

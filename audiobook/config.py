@@ -8,6 +8,7 @@ CHUNK_MAX_CHARS = 250
 PAUSE_MS_DEFAULT = 350
 OUTPUT_FORMAT_DEFAULT = "mp3"
 CACHE_DIRNAME = ".cache"
+USE_GPU = False
 
 PACKAGE_DIR = Path(__file__).resolve().parent
 
@@ -19,4 +20,4 @@ DEFAULT_SPEAKER: str | None = str(PACKAGE_DIR / "my_reader.wav")
 if DEFAULT_SPEAKER and not Path(DEFAULT_SPEAKER).exists():
     DEFAULT_SPEAKER = None
 
-FFMPEG_PATH: str | None = None
+FFMPEG_PATH: str | None = "/usr/bin/ffmpeg"

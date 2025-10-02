@@ -4,6 +4,8 @@ import threading
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
+import logging
+import os
 
 import numpy as np
 import pyqtgraph as pg
@@ -37,6 +39,11 @@ from audiobook.app_gui.workers import BookWorker
 configure_ffmpeg(FFMPEG_PATH)
 
 
+logger = logging.getLogger(__name__)
+DISABLE_MEDIA = bool(os.environ.get("AUDIOBOOK_DISABLE_MEDIA"))
+SYNC_SYNTH = bool(os.environ.get("AUDIOBOOK_SYNC_MODE"))
+
+
 @dataclass
 class Plan:
     book: BookMeta
@@ -50,6 +57,7 @@ class Plan:
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
+        logger.info("MainWindow init: begin")
         self.setWindowTitle("Audiobook TTS")
         self.resize(1400, 860)
 
@@ -59,9 +67,17 @@ class MainWindow(QMainWindow):
         self._epub_path: Optional[Path] = None
         self._ffmpeg_path: Optional[str] = FFMPEG_PATH
 
-        self._player = QMediaPlayer(self)
-        self._audio_output = QAudioOutput(self)
-        self._player.setAudioOutput(self._audio_output)
+        if DISABLE_MEDIA:
+            logger.warning("MainWindow init: media components disabled via env")
+            self._player = None
+            self._audio_output = None
+        else:
+            logger.info("MainWindow init: creating media player")
+            self._player = QMediaPlayer(self)
+            logger.info("MainWindow init: creating audio output")
+            self._audio_output = QAudioOutput(self)
+            self._player.setAudioOutput(self._audio_output)
+            logger.info("MainWindow init: media player wired")
         self._slider_is_pressed = False
         self._current_audio_path: Optional[Path] = None
         self._current_duration_ms = 0
@@ -72,13 +88,16 @@ class MainWindow(QMainWindow):
         outer_layout.setContentsMargins(8, 8, 8, 8)
         outer_layout.setSpacing(8)
 
+        logger.info("MainWindow init: setting up menu")
         self._setup_menu()
+        logger.info("MainWindow init: creating toolbar")
         toolbar = self._create_toolbar()
         outer_layout.addWidget(toolbar)
 
         main_split = QHBoxLayout()
         outer_layout.addLayout(main_split, stretch=1)
 
+        logger.info("MainWindow init: creating TOC panel")
         self.toc = TocPanel(self)
         self.toc.setMinimumWidth(280)
         self.toc.current_changed.connect(self._show_chapter_text)
@@ -88,24 +107,30 @@ class MainWindow(QMainWindow):
         right_panel.setSpacing(8)
         main_split.addLayout(right_panel, stretch=1)
 
+        logger.info("MainWindow init: creating actions and summary panels")
         right_panel.addWidget(self._create_actions_group())
         right_panel.addWidget(self._create_summary_group())
 
+        logger.info("MainWindow init: creating reader view")
         self.reader_view = QTextEdit(self)
         self.reader_view.setReadOnly(True)
         self.reader_view.setPlaceholderText("EPUB not loaded yet.")
         right_panel.addWidget(self.reader_view, stretch=1)
 
+        logger.info("MainWindow init: creating status label")
         self.status = QLabel("Ready", self)
         right_panel.addWidget(self.status)
 
+        logger.info("MainWindow init: creating progress panel")
         self.progress = ProgressPanel(self)
         right_panel.addWidget(self.progress)
 
+        logger.info("MainWindow init: creating audio preview group")
         self.audio_group = self._create_audio_preview_group()
         outer_layout.addWidget(self.audio_group)
         self._apply_audio_group_size()
 
+        logger.info("MainWindow init: creating log view")
         self.log_view = QTextEdit(self)
         self.log_view.setReadOnly(True)
         self.log_view.setFixedHeight(160)
@@ -114,8 +139,10 @@ class MainWindow(QMainWindow):
 
         self._thread: Optional[QThread] = None
 
+        logger.info("MainWindow init: loading default EPUB")
         self._load_default_epub()
         self._update_summary_labels()
+        logger.info("MainWindow init: complete")
 
     def _setup_menu(self) -> None:
         bar = self.menuBar()
@@ -182,11 +209,13 @@ class MainWindow(QMainWindow):
         return group
 
     def _create_audio_preview_group(self) -> QWidget:
+        logger.info("MainWindow: constructing audio preview group")
         group = QGroupBox("Audio Preview", self)
         layout = QVBoxLayout(group)
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(6)
 
+        logger.info("MainWindow: creating waveform widget")
         self.waveform = pg.PlotWidget()
         self.waveform.setBackground("w")
         self.waveform.showGrid(x=True, y=True, alpha=0.15)
@@ -194,6 +223,7 @@ class MainWindow(QMainWindow):
         self.waveform.setLabel("left", "Amplitude")
         layout.addWidget(self.waveform)
 
+        logger.info("MainWindow: creating position slider")
         self.position_slider = QSlider(Qt.Horizontal, self)
         self.position_slider.setRange(0, 0)
         self.position_slider.sliderPressed.connect(self._on_slider_pressed)
@@ -217,8 +247,9 @@ class MainWindow(QMainWindow):
         btn_row.addStretch(1)
         layout.addLayout(btn_row)
 
-        self._player.positionChanged.connect(self._on_player_position)
-        self._player.durationChanged.connect(self._on_player_duration)
+        if self._player:
+            self._player.positionChanged.connect(self._on_player_position)
+            self._player.durationChanged.connect(self._on_player_duration)
 
         self._update_audio_controls(False)
         return group
@@ -299,19 +330,38 @@ class MainWindow(QMainWindow):
         plan = Plan(book=self._plan.book, chapters=chapters, out_dir=self._out_dir, speaker_wav=self._speaker)
         cancel_event = threading.Event()
         worker = BookWorker(plan, cancel_event)
-        thread = QThread(self)
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.progress.connect(self.progress.update_progress)
-        worker.progress.connect(self._on_progress)
-        worker.finished.connect(self._on_finished)
-        worker.failed.connect(self._on_failed)
-        worker.finished.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        self._thread = thread
-        thread.start()
+        self._worker = worker
+        self._thread = None
+        logger.info(
+            "Preparing synthesis: chapters=%d out_dir=%s speaker=%s sync=%s",
+            len(chapters),
+            self._out_dir,
+            plan.speaker_wav,
+            SYNC_SYNTH,
+        )
+        if SYNC_SYNTH:
+            logger.warning("Running synthesis in UI thread (sync mode)")
+            try:
+                worker.run()
+            except Exception as exc:  # pragma: no cover
+                logger.exception("Synchronous synthesis failed")
+                self._on_failed(str(exc))
+                return
+        else:
+            thread = QThread(self)
+            worker.moveToThread(thread)
+            thread.started.connect(worker.run)
+            worker.progress.connect(self.progress.update_progress)
+            worker.progress.connect(self._on_progress)
+            worker.finished.connect(self._on_finished)
+            worker.failed.connect(self._on_failed)
+            worker.finished.connect(thread.quit)
+            worker.failed.connect(thread.quit)
+            thread.finished.connect(worker.deleteLater)
+            thread.finished.connect(thread.deleteLater)
+            self._thread = thread
+            thread.start()
+            logger.info("Synthesis thread started")
         self.status.setText("Synthesis started")
         self._append_log("Synthesis started")
 
@@ -361,12 +411,15 @@ class MainWindow(QMainWindow):
 
     # --- Audio preview helpers -------------------------------------------------
     def _update_audio_controls(self, enabled: bool) -> None:
-        self.btn_play.setEnabled(enabled)
-        self.btn_stop.setEnabled(enabled)
+        self.btn_play.setEnabled(enabled and not DISABLE_MEDIA)
+        self.btn_stop.setEnabled(enabled and not DISABLE_MEDIA)
         self.btn_save.setEnabled(enabled)
-        self.position_slider.setEnabled(enabled)
+        self.position_slider.setEnabled(enabled and not DISABLE_MEDIA)
 
     def _set_audio_preview(self, path: Path) -> None:
+        if DISABLE_MEDIA:
+            self._append_log("Audio preview disabled")
+            return
         if not path.exists():
             return
         self._current_audio_path = path
@@ -390,21 +443,23 @@ class MainWindow(QMainWindow):
             self.position_slider.setRange(0, duration_ms)
             self.position_slider.setValue(0)
             self.position_slider.blockSignals(False)
-            self._player.setSource(QUrl.fromLocalFile(str(path.resolve())))
+            if self._player:
+                self._player.setSource(QUrl.fromLocalFile(str(path.resolve())))
             self._update_audio_controls(True)
             self._append_log(f"Loaded audio preview: {path}")
         except Exception as exc:  # pragma: no cover
             self._append_log(f"Failed to load audio preview: {exc}")
 
     def _play_audio(self) -> None:
-        if not self._current_audio_path:
+        if not self._current_audio_path or not self._player:
             return
         self._player.play()
         self._append_log("Playback started")
 
     def _stop_audio(self) -> None:
-        self._player.stop()
-        self._append_log("Playback stopped")
+        if self._player:
+            self._player.stop()
+            self._append_log("Playback stopped")
 
     def _save_audio(self) -> None:
         if not self._current_audio_path:
@@ -417,29 +472,30 @@ class MainWindow(QMainWindow):
         self._append_log(f"Saved copy to {out_path}")
     def _on_slider_pressed(self) -> None:
         self._slider_is_pressed = True
+        if self._player:
+            self._player.pause()
 
     def _on_slider_released(self) -> None:
         self._slider_is_pressed = False
-        self._player.setPosition(self.position_slider.value())
+        if self._player:
+            self._player.setPosition(self.position_slider.value())
+            self._player.play()
 
     def _on_slider_moved(self, position: int) -> None:
-        if self._slider_is_pressed:
+        if self._slider_is_pressed and self._player:
             self.status.setText(f"Seeking to {position / 1000:.1f}s")
 
     def _on_player_position(self, position: int) -> None:
-        if not self._slider_is_pressed:
-            self.position_slider.blockSignals(True)
-            self.position_slider.setValue(position)
-            self.position_slider.blockSignals(False)
+        if self._slider_is_pressed or DISABLE_MEDIA:
+            return
+        self.position_slider.blockSignals(True)
+        self.position_slider.setValue(position)
+        self.position_slider.blockSignals(False)
 
     def _on_player_duration(self, duration: int) -> None:
         self._current_duration_ms = duration
+        if DISABLE_MEDIA:
+            return
         self.position_slider.blockSignals(True)
         self.position_slider.setRange(0, max(duration, 0))
         self.position_slider.blockSignals(False)
-
-
-
-
-
-

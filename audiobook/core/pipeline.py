@@ -4,6 +4,8 @@ import threading
 from pathlib import Path
 from typing import Callable, List, Optional
 
+import logging
+
 from audiobook.config import CHUNK_MAX_CHARS
 from audiobook.core.chunker import chunk_paragraphs
 from audiobook.core.epub_reader import Chapter
@@ -16,7 +18,11 @@ from audiobook.core import naming
 LogFn = Optional[Callable[[str], None]]
 
 
+logger = logging.getLogger(__name__)
+
+
 def _log(log: LogFn, message: str) -> None:
+    logger.info(message)
     if log:
         log(message)
 
