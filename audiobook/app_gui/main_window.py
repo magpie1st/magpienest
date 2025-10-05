@@ -6,10 +6,11 @@ from pathlib import Path
 from typing import Optional
 import logging
 import os
+import tempfile
 
 import numpy as np
 import pyqtgraph as pg
-from PySide6.QtCore import QThread, Qt, QUrl
+from PySide6.QtCore import QThread, Qt, QUrl, QSettings
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtWidgets import (
     QFormLayout,
@@ -66,6 +67,9 @@ class MainWindow(QMainWindow):
         self._plan: Optional[Plan] = None
         self._epub_path: Optional[Path] = None
         self._ffmpeg_path: Optional[str] = FFMPEG_PATH
+        self._settings = QSettings("MagpieNest", "AudiobookTTS")
+        self._preview_temp_path: Optional[Path] = None
+        self._using_temp_preview = False
 
         if DISABLE_MEDIA:
             logger.warning("MainWindow init: media components disabled via env")
@@ -77,6 +81,7 @@ class MainWindow(QMainWindow):
             logger.info("MainWindow init: creating audio output")
             self._audio_output = QAudioOutput(self)
             self._player.setAudioOutput(self._audio_output)
+            self._player.errorOccurred.connect(self._on_player_error)
             logger.info("MainWindow init: media player wired")
         self._slider_is_pressed = False
         self._current_audio_path: Optional[Path] = None
@@ -139,8 +144,11 @@ class MainWindow(QMainWindow):
 
         self._thread: Optional[QThread] = None
 
-        logger.info("MainWindow init: loading default EPUB")
-        self._load_default_epub()
+        logger.info("MainWindow init: restoring previous session")
+        self._restore_session()
+        if not self._plan:
+            logger.info("MainWindow init: loading default EPUB")
+            self._load_default_epub()
         self._update_summary_labels()
         logger.info("MainWindow init: complete")
 
@@ -254,11 +262,60 @@ class MainWindow(QMainWindow):
         self._update_audio_controls(False)
         return group
 
-    def _load_default_epub(self) -> None:
-        pass
+    def _restore_session(self) -> None:
+        if not hasattr(self, "_settings"):
+            return
+        out_dir = self._settings.value("paths/output_dir")
+        if isinstance(out_dir, str) and out_dir:
+            candidate = Path(out_dir)
+            if candidate.exists():
+                self._out_dir = candidate
+
+        speaker = self._settings.value("paths/speaker")
+        if isinstance(speaker, str) and speaker:
+            self._speaker = speaker
+
+        ffmpeg = self._settings.value("paths/ffmpeg")
+        if isinstance(ffmpeg, str) and ffmpeg:
+            self._ffmpeg_path = ffmpeg
+            configure_ffmpeg(ffmpeg)
+
+        epub_value = self._settings.value("paths/epub")
+        if isinstance(epub_value, str) and epub_value:
+            epub_path = Path(epub_value)
+            if epub_path.exists():
+                try:
+                    self._load_book(epub_path)
+                    self._append_log(f"Restored last EPUB: {epub_path}")
+                except Exception as exc:  # pragma: no cover
+                    self._append_log(f"Failed to restore last EPUB {epub_path}: {exc}")
+            else:
+                self._append_log(f"Last EPUB missing: {epub_path}")
+
+    def _save_settings(self) -> None:
+        if not hasattr(self, "_settings"):
+            return
+        if self._out_dir:
+            self._settings.setValue("paths/output_dir", str(self._out_dir))
+        else:
+            self._settings.remove("paths/output_dir")
+        if self._speaker:
+            self._settings.setValue("paths/speaker", self._speaker)
+        else:
+            self._settings.remove("paths/speaker")
+        if self._ffmpeg_path:
+            self._settings.setValue("paths/ffmpeg", self._ffmpeg_path)
+        else:
+            self._settings.remove("paths/ffmpeg")
+        if self._epub_path:
+            self._settings.setValue("paths/epub", str(self._epub_path))
+        else:
+            self._settings.remove("paths/epub")
+        self._settings.sync()
 
     def _append_log(self, message: str) -> None:
         self.log_view.append(str(message))
+
 
     def _load_default_epub(self) -> None:
         if DEFAULT_EPUB and DEFAULT_EPUB.exists():
@@ -280,6 +337,7 @@ class MainWindow(QMainWindow):
         if chapters:
             self._show_chapter_text(0)
         self._update_summary_labels()
+        self._save_settings()
 
     def _open_epub(self) -> None:
         start_dir = str(self._epub_path.parent) if self._epub_path else str(Path.home())
@@ -296,6 +354,7 @@ class MainWindow(QMainWindow):
             self.status.setText(f"Output: {path}")
             self._append_log(f"Output directory set to {path}")
             self._update_summary_labels()
+            self._save_settings()
 
     def _pick_speaker(self) -> None:
         start_dir = str(Path(self._speaker).parent) if self._speaker else str(Path.home())
@@ -305,6 +364,7 @@ class MainWindow(QMainWindow):
             self.status.setText(f"Speaker: {Path(path).name}")
             self._append_log(f"Speaker set to {path}")
             self._update_summary_labels()
+            self._save_settings()
 
     def _pick_ffmpeg(self) -> None:
         start_dir = str(Path(self._ffmpeg_path).parent) if self._ffmpeg_path else str(Path.home())
@@ -315,6 +375,7 @@ class MainWindow(QMainWindow):
         configure_ffmpeg(path)
         self._append_log(f"FFmpeg set to {path}")
         self._update_summary_labels()
+        self._save_settings()
 
     def _start_book(self) -> None:
         if not self._plan:
@@ -322,6 +383,7 @@ class MainWindow(QMainWindow):
             return
         if not self._out_dir:
             self._out_dir = Path.cwd()
+            self._save_settings()
         selected = self.toc.selected()
         chapters = [c for idx, c in enumerate(self._plan.chapters) if idx in selected] if selected else self._plan.chapters
         if not chapters:
@@ -423,6 +485,7 @@ class MainWindow(QMainWindow):
         if not path.exists():
             return
         self._current_audio_path = path
+        self._cleanup_preview_temp()
         try:
             from pydub import AudioSegment
 
@@ -443,12 +506,39 @@ class MainWindow(QMainWindow):
             self.position_slider.setRange(0, duration_ms)
             self.position_slider.setValue(0)
             self.position_slider.blockSignals(False)
+            preview_path = self._prepare_preview_source(seg, path)
             if self._player:
-                self._player.setSource(QUrl.fromLocalFile(str(path.resolve())))
+                self._player.stop()
+                self._player.setSource(QUrl.fromLocalFile(str(preview_path.resolve())))
             self._update_audio_controls(True)
             self._append_log(f"Loaded audio preview: {path}")
         except Exception as exc:  # pragma: no cover
             self._append_log(f"Failed to load audio preview: {exc}")
+
+    def _prepare_preview_source(self, segment, original: Path) -> Path:
+        if original.suffix.lower() != ".mp3":
+            self._using_temp_preview = False
+            return original
+        try:
+            fd, tmp_name = tempfile.mkstemp(prefix="audiobook_preview_", suffix=".wav")
+            os.close(fd)
+            segment.export(tmp_name, format="wav")
+            self._preview_temp_path = Path(tmp_name)
+            self._using_temp_preview = True
+            return self._preview_temp_path
+        except Exception as exc:  # pragma: no cover
+            self._append_log(f"Preview fallback failed: {exc}")
+            self._cleanup_preview_temp()
+            return original
+
+    def _cleanup_preview_temp(self) -> None:
+        if self._preview_temp_path and self._preview_temp_path.exists():
+            try:
+                self._preview_temp_path.unlink()
+            except OSError:
+                pass
+        self._preview_temp_path = None
+        self._using_temp_preview = False
 
     def _play_audio(self) -> None:
         if not self._current_audio_path or not self._player:
@@ -470,6 +560,33 @@ class MainWindow(QMainWindow):
         out_path = Path(dest)
         out_path.write_bytes(self._current_audio_path.read_bytes())
         self._append_log(f"Saved copy to {out_path}")
+
+    def _on_player_error(self, error, error_string) -> None:
+        if error == QMediaPlayer.NoError:
+            return
+        message = error_string or "Unknown playback error"
+        self.status.setText(f"Playback error: {message}")
+        self._append_log(f"Playback error: {message}")
+        if (
+            self._current_audio_path
+            and self._current_audio_path.exists()
+            and self._current_audio_path.suffix.lower() == ".mp3"
+            and not self._using_temp_preview
+        ):
+            try:
+                from pydub import AudioSegment
+
+                seg = AudioSegment.from_file(self._current_audio_path)
+                self._cleanup_preview_temp()
+                fallback = self._prepare_preview_source(seg, self._current_audio_path)
+                if self._using_temp_preview and self._player:
+                    self._player.stop()
+                    self._player.setSource(QUrl.fromLocalFile(str(fallback.resolve())))
+                    self._player.play()
+                    self._append_log("Retrying playback with WAV preview fallback")
+            except Exception as exc:  # pragma: no cover
+                self._append_log(f"Playback recovery failed: {exc}")
+
     def _on_slider_pressed(self) -> None:
         self._slider_is_pressed = True
         if self._player:
@@ -499,3 +616,8 @@ class MainWindow(QMainWindow):
         self.position_slider.blockSignals(True)
         self.position_slider.setRange(0, max(duration, 0))
         self.position_slider.blockSignals(False)
+
+    def closeEvent(self, event) -> None:
+        self._cleanup_preview_temp()
+        self._save_settings()
+        super().closeEvent(event)
