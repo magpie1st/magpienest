@@ -6,3 +6,4 @@ jinja2>=3.1
 tokenizers>=0.15  # optional: precise token counting (requires tokenizer JSON)
 pydub>=0.25  # requires system ffmpeg for MP3 export
 # Coqui XTTS needs manual install (pip install git+https://github.com/coqui-ai/TTS)
+# Coqui XTTS requires Python 3.9~3.11; install in a compatible virtual environment before running the server

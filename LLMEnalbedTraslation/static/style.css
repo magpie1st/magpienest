@@ -63,6 +63,11 @@ section {
   align-items: center;
 }
 
+.form-grid.compact {
+  grid-template-columns: 150px 1fr;
+  gap: 6px 12px;
+}
+
 label {
   font-weight: 600;
 }
@@ -147,7 +152,7 @@ button:disabled {
 }
 
 .prompt-config textarea {
-  min-height: 140px;
+  min-height: 220px;
   font-family: "JetBrains Mono", "Fira Code", monospace;
 }
 
@@ -166,13 +171,15 @@ button:disabled {
 
 .tts {
   margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
 .tts-controls {
   display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .tts-status {
@@ -192,9 +199,76 @@ button:disabled {
   color: var(--error);
 }
 
-.tts audio {
+.tts-settings {
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 12px;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tts-settings h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.tts-settings-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.tts-run-form {
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.speaker-select {
+  display: flex;
+  gap: 8px;
+}
+
+.speaker-select select {
+  min-width: 160px;
+}
+
+.save-output {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tts-run-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.tts-audio-preview {
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 12px;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#ttsWaveform {
   width: 100%;
-  margin-top: 8px;
+  background: rgba(148, 163, 184, 0.15);
+  border-radius: 8px;
+  height: 90px;
+}
+
+#ttsAudio {
+  width: 100%;
 }
 
 .hint {
@@ -212,12 +286,7 @@ button:disabled {
 .panes {
   display: grid;
   gap: 16px;
-}
-
-@media (min-width: 900px) {
-  .panes {
-    grid-template-columns: 1fr 1fr;
-  }
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 }
 
 .pane h3 {
@@ -226,7 +295,7 @@ button:disabled {
 }
 
 textarea {
-  min-height: 260px;
+  min-height: 320px;
   resize: vertical;
 }
 

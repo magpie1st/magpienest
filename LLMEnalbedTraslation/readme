@@ -6,7 +6,7 @@
 - Jetson 연결 정보(host/port) 설정 및 연결 테스트
 - qwen 시리즈 등의 Ollama 모델을 선택해 번역 수행
 - Temperature·Stream 플래그·프롬프트 템플릿·요청 타임아웃·Progress 스트리밍을 런타임에 조정
-- Coqui XTTS v2 기반 영어 원문 낭독(TTS)·진행률 표시·MP3 저장 지원
+- Coqui XTTS v2 기반 영어 원문 낭독(TTS)·진행률 표시·파형 미리보기·MP3 저장 지원
 - 좌측 영어 입력, 우측 번역 결과 확인
 - FastAPI 백엔드 + Jinja2 템플릿 기반 UI
 
@@ -27,6 +27,15 @@ uvicorn server:get_app --reload
 - LLM이 `<think>...</think>` 메타 설명을 반환할 때는 Strip `<think>` 옵션을 켜서 결과에서 제거할 수 있습니다.
 - 네트워크 환경에 따라 Timeout(sec) 값을 늘려 긴 응답을 기다릴 수 있습니다.
 - Hugging Face `tokenizers` 라이브러리와 Qwen 토크나이저 JSON 경로를 `QWEN_TOKENIZER_PATH` 환경변수에 지정하면 더 정확한 토큰 길이 추정이 가능합니다. 지정하지 않으면 문자/단어 기반의 근사치를 사용합니다.
+
+## TTS 설정 및 사용
+
+1. Coqui XTTS는 Python 3.9~3.11에서만 설치됩니다. 별도의 가상환경을 만든 뒤 FFmpeg, PyTorch, `pydub`, `git+https://github.com/coqui-ai/TTS` 순으로 설치하세요.
+2. 웹 UI 하단의 '영어 원문 낭독' 섹션에서 FFmpeg 경로, 출력 폴더, 기본 화자/언어, GPU 사용을 설정하고 `설정 저장`을 누르면 서버 설정이 갱신됩니다.
+3. `화자 목록 새로고침`으로 모델에 내장된 화자 이름을 다시 불러올 수 있으며, 직접 입력 칸이나 Speaker WAV 경로를 통해 보이스 클로닝도 사용할 수 있습니다.
+4. 낭독 실행 시 진행률과 상태가 표시되고, 완료되면 파형과 오디오 플레이어에서 즉시 재생 또는 다운로드가 가능합니다.
+5. `MP3 저장`을 켜면 서버 설정에 지정한 출력 폴더에도 MP3 파일이 저장됩니다. 저장 경로는 완료 메시지에 함께 표시됩니다.
+   실행 중 단계별 로그는 `uvicorn ... --log-level debug` 서버 콘솔과 브라우저 개발자 도구(Console)에 `[UI] ...` 메시지로 출력됩니다.
 
 ## 영어 낭독(Coqui XTTS v2)
 

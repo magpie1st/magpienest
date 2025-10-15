@@ -143,19 +143,61 @@
 
       <section class="tts" id="ttsSection">
         <h2>영어 원문 낭독 (Coqui XTTS v2)</h2>
-        <p class="hint">원문 영어 텍스트를 Coqui XTTS v2 모델로 낭독합니다. 기본 언어는 영어입니다.</p>
-        <div class="tts-controls">
-          <label for="ttsSpeaker">Speaker</label>
-          <input
-            id="ttsSpeaker"
-            type="text"
-            placeholder="선택 사항: en_speaker_6"
-            title="XTTS 사전 학습 화자 이름 (비워두면 기본 화자를 사용합니다)"
-          />
-          <button id="ttsSpeakBtn" type="button">낭독 실행</button>
-          <button id="ttsStopBtn" type="button" disabled>정지</button>
-          <button id="ttsSaveBtn" type="button" disabled>저장</button>
+        <p class="hint">원문 영어 텍스트를 Coqui XTTS v2 모델로 낭독합니다. 기본 언어, 화자, FFmpeg 경로 등을 원하는 값으로 설정할 수 있습니다.</p>
+
+        <div class="tts-settings">
+          <h3>낭독 기본 설정</h3>
+          <div class="form-grid compact">
+            <label for="ttsFfmpegPath">FFmpeg 경로</label>
+            <input id="ttsFfmpegPath" type="text" placeholder="예: /usr/bin/ffmpeg" />
+
+            <label for="ttsOutputDir">출력 폴더</label>
+            <input id="ttsOutputDir" type="text" placeholder="예: ~/LLMTTS/audio" />
+
+            <label for="ttsDefaultSpeaker">기본 Speaker</label>
+            <select id="ttsDefaultSpeaker"></select>
+
+            <label for="ttsDefaultLanguage">기본 언어</label>
+            <input id="ttsDefaultLanguage" type="text" value="en" />
+
+            <label for="ttsUseCuda">GPU 사용</label>
+            <input id="ttsUseCuda" type="checkbox" />
+          </div>
+          <div class="tts-settings-actions">
+            <button id="ttsSaveSettingsBtn" type="button">설정 저장</button>
+            <button id="ttsReloadSpeakersBtn" type="button">화자 목록 새로고침</button>
+          </div>
         </div>
+
+        <div class="tts-controls">
+          <div class="tts-run-form">
+            <div class="form-grid compact">
+              <label for="ttsSpeakerSelect">사용할 Speaker</label>
+              <div class="speaker-select">
+                <select id="ttsSpeakerSelect"></select>
+                <input id="ttsSpeakerCustom" type="text" placeholder="직접 입력 (선택 사항)" />
+              </div>
+
+              <label for="ttsSpeakerWav">Speaker WAV</label>
+              <input id="ttsSpeakerWav" type="text" placeholder="화자 WAV 경로 (선택 사항)" />
+
+              <label for="ttsLanguage">언어</label>
+              <input id="ttsLanguage" type="text" placeholder="예: en" />
+
+              <label for="ttsSaveOutput">MP3 저장</label>
+              <div class="save-output">
+                <input id="ttsSaveOutput" type="checkbox" />
+                <input id="ttsFileName" type="text" placeholder="파일명 (미입력 시 자동 지정)" disabled />
+              </div>
+            </div>
+            <div class="tts-run-actions">
+              <button id="ttsSpeakBtn" type="button">낭독 실행</button>
+              <button id="ttsStopBtn" type="button" disabled>정지</button>
+              <button id="ttsSaveBtn" type="button" disabled>다운로드</button>
+            </div>
+          </div>
+        </div>
+
         <div class="tts-status" id="ttsStatusPanel" hidden>
           <p id="ttsStatusMessage"></p>
           <div class="progress" id="ttsProgressWrapper" hidden>
@@ -165,7 +207,11 @@
             <span id="ttsProgressLabel">0%</span>
           </div>
         </div>
-        <audio id="ttsAudio" controls hidden></audio>
+
+        <div class="tts-audio-preview" id="ttsAudioPreview" hidden>
+          <canvas id="ttsWaveform" height="90"></canvas>
+          <audio id="ttsAudio" controls></audio>
+        </div>
       </section>
 
       <section class="status" id="statusPanel" hidden>
@@ -225,18 +271,177 @@
       const ttsSpeakBtn = document.getElementById("ttsSpeakBtn");
       const ttsStopBtn = document.getElementById("ttsStopBtn");
       const ttsSaveBtn = document.getElementById("ttsSaveBtn");
-      const ttsSpeakerInput = document.getElementById("ttsSpeaker");
+      const ttsFfmpegPathInput = document.getElementById("ttsFfmpegPath");
+      const ttsOutputDirInput = document.getElementById("ttsOutputDir");
+      const ttsDefaultSpeakerSelect = document.getElementById("ttsDefaultSpeaker");
+      const ttsDefaultLanguageInput = document.getElementById("ttsDefaultLanguage");
+      const ttsUseCudaCheckbox = document.getElementById("ttsUseCuda");
+      const ttsSaveSettingsBtn = document.getElementById("ttsSaveSettingsBtn");
+      const ttsReloadSpeakersBtn = document.getElementById("ttsReloadSpeakersBtn");
+      const ttsSpeakerSelect = document.getElementById("ttsSpeakerSelect");
+      const ttsSpeakerCustomInput = document.getElementById("ttsSpeakerCustom");
+      const ttsSpeakerWavInput = document.getElementById("ttsSpeakerWav");
+      const ttsLanguageInput = document.getElementById("ttsLanguage");
+      const ttsSaveOutputCheckbox = document.getElementById("ttsSaveOutput");
+      const ttsFileNameInput = document.getElementById("ttsFileName");
       const ttsStatusPanel = document.getElementById("ttsStatusPanel");
       const ttsStatusMessage = document.getElementById("ttsStatusMessage");
       const ttsProgressWrapper = document.getElementById("ttsProgressWrapper");
       const ttsProgressFill = document.getElementById("ttsProgressFill");
       const ttsProgressLabel = document.getElementById("ttsProgressLabel");
+      const ttsAudioPreview = document.getElementById("ttsAudioPreview");
       const ttsAudio = document.getElementById("ttsAudio");
+      const ttsWaveformCanvas = document.getElementById("ttsWaveform");
+      const ttsWaveformCtx = ttsWaveformCanvas.getContext("2d");
 
       let currentController = null;
       let currentTtsController = null;
       let lastTtsBlob = null;
       let lastTtsUrl = null;
+      let waveformData = null;
+      let availableSpeakers = [];
+
+      const DEFAULT_SPEAKER_WAV = "/home/magpie/Workspace/dev/macGitHub/magpienest/audiobook/my_reader.wav";
+      const DEFAULT_FFMPEG_PATH = "/usr/bin/ffmpeg";
+      const DEFAULT_SPEAKER_NAME = "english_female_0";
+      const DEFAULT_LANGUAGE_CODE = "en";
+      const DEFAULT_OUTPUT_DIR_PATH = "/home/magpie/LLMTTS/audio";
+
+      modelSelect.addEventListener("change", () => {
+        console.log("[UI] Model changed", { value: modelSelect.value });
+      });
+
+      async function loadTtsSettings(showStatusMessage = false) {
+        try {
+          const res = await fetch("/api/tts/settings");
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.detail || "TTS 설정을 불러오지 못했습니다.");
+          }
+          console.log("[UI] Loaded TTS settings", data);
+
+          ttsFfmpegPathInput.value = data.ffmpeg_path || DEFAULT_FFMPEG_PATH;
+          ttsOutputDirInput.value = data.output_dir || DEFAULT_OUTPUT_DIR_PATH;
+          ttsDefaultLanguageInput.value = data.default_language || DEFAULT_LANGUAGE_CODE;
+          if (!ttsLanguageInput.value) {
+            ttsLanguageInput.value = data.default_language || DEFAULT_LANGUAGE_CODE;
+          }
+          ttsLanguageInput.placeholder = data.default_language || DEFAULT_LANGUAGE_CODE;
+          ttsUseCudaCheckbox.checked = Boolean(data.use_cuda);
+
+          availableSpeakers = Array.isArray(data.available_speakers) ? data.available_speakers : [];
+          const resolvedDefaultSpeaker = data.default_speaker || DEFAULT_SPEAKER_NAME;
+          populateSpeakerSelects(availableSpeakers, resolvedDefaultSpeaker);
+          if (availableSpeakers.length === 0 && resolvedDefaultSpeaker) {
+            ttsSpeakerCustomInput.value = resolvedDefaultSpeaker;
+          }
+
+          if (!ttsSpeakerWavInput.value) {
+            ttsSpeakerWavInput.value = DEFAULT_SPEAKER_WAV;
+          }
+          if (!ttsFfmpegPathInput.value) {
+            ttsFfmpegPathInput.value = DEFAULT_FFMPEG_PATH;
+          }
+          if (!ttsOutputDirInput.value) {
+            ttsOutputDirInput.value = DEFAULT_OUTPUT_DIR_PATH;
+          }
+
+          ttsSaveOutputCheckbox.dispatchEvent(new Event("change"));
+
+          if (showStatusMessage) {
+            showTtsStatus("TTS 설정을 갱신했습니다.");
+          }
+        } catch (error) {
+          console.error("Failed to load TTS settings", error);
+          if (showStatusMessage) {
+            showTtsStatus((error && error.message) || "TTS 설정을 불러오지 못했습니다.", true);
+          }
+        }
+      }
+
+      async function saveTtsSettings() {
+        try {
+          const payload = {
+            ffmpeg_path: ttsFfmpegPathInput.value.trim() || null,
+            output_dir: ttsOutputDirInput.value.trim() || null,
+            default_language: ttsDefaultLanguageInput.value.trim() || null,
+            default_speaker: ttsDefaultSpeakerSelect.value || null,
+            use_cuda: ttsUseCudaCheckbox.checked,
+          };
+
+          console.log("[UI] Saving TTS settings", payload);
+
+          const res = await fetch("/api/tts/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.detail || "TTS 설정을 저장하지 못했습니다.");
+          }
+
+          ttsFfmpegPathInput.value = data.ffmpeg_path || DEFAULT_FFMPEG_PATH;
+          ttsOutputDirInput.value = data.output_dir || DEFAULT_OUTPUT_DIR_PATH;
+          ttsDefaultLanguageInput.value = data.default_language || DEFAULT_LANGUAGE_CODE;
+          ttsLanguageInput.placeholder = data.default_language || DEFAULT_LANGUAGE_CODE;
+          if (!ttsLanguageInput.value) {
+            ttsLanguageInput.value = data.default_language || DEFAULT_LANGUAGE_CODE;
+          }
+          ttsUseCudaCheckbox.checked = Boolean(data.use_cuda);
+
+          availableSpeakers = Array.isArray(data.available_speakers) ? data.available_speakers : [];
+          const resolvedDefaultSpeaker = data.default_speaker || DEFAULT_SPEAKER_NAME;
+          populateSpeakerSelects(availableSpeakers, resolvedDefaultSpeaker);
+          if (availableSpeakers.length === 0 && resolvedDefaultSpeaker) {
+            ttsSpeakerCustomInput.value = resolvedDefaultSpeaker;
+          }
+
+          if (!ttsSpeakerWavInput.value) {
+            ttsSpeakerWavInput.value = DEFAULT_SPEAKER_WAV;
+          }
+          if (!ttsFfmpegPathInput.value) {
+            ttsFfmpegPathInput.value = DEFAULT_FFMPEG_PATH;
+          }
+          if (!ttsOutputDirInput.value) {
+            ttsOutputDirInput.value = DEFAULT_OUTPUT_DIR_PATH;
+          }
+
+          ttsSaveOutputCheckbox.dispatchEvent(new Event("change"));
+          showTtsStatus("TTS 설정을 저장했습니다.");
+        } catch (error) {
+          console.error("[UI] Failed to save TTS settings", error);
+          showTtsStatus((error && error.message) || "TTS 설정 저장에 실패했습니다.", true);
+        }
+      }
+
+      function populateSpeakerSelects(speakers, defaultSpeaker) {
+        const options = [""].concat(speakers || []);
+        const selected = defaultSpeaker || "";
+        const hasSelected = options.includes(selected);
+        setSelectOptions(ttsDefaultSpeakerSelect, options, hasSelected ? selected : "");
+        if (!hasSelected && selected) {
+          ttsDefaultSpeakerSelect.value = "";
+          ttsSpeakerCustomInput.value = selected;
+        }
+
+        const shouldUseList = !ttsSpeakerCustomInput.value.trim() && hasSelected;
+        setSelectOptions(ttsSpeakerSelect, options, shouldUseList ? selected : "");
+      }
+
+      function setSelectOptions(selectElem, options, selectedValue) {
+        const previous = selectedValue ?? selectElem.value;
+        selectElem.innerHTML = "";
+        options.forEach((value) => {
+          const opt = document.createElement("option");
+          opt.value = value;
+          opt.textContent = value || "(자동 선택)";
+          if (value === previous) {
+            opt.selected = true;
+          }
+          selectElem.appendChild(opt);
+        });
+      }
 
       function showStatus(message, isError = false, isLoading = false) {
         statusMessage.textContent = message;
@@ -291,21 +496,98 @@
           lastTtsUrl = null;
         }
         lastTtsBlob = blob || null;
+        waveformData = null;
         if (!blob) {
           ttsAudio.pause();
           ttsAudio.src = "";
-          ttsAudio.hidden = true;
+          ttsAudioPreview.hidden = true;
           ttsSaveBtn.disabled = true;
+          ttsSaveBtn.title = "다운로드";
+          drawWaveform();
           return;
         }
         lastTtsUrl = URL.createObjectURL(blob);
         ttsAudio.src = lastTtsUrl;
-        ttsAudio.hidden = false;
+        ttsAudioPreview.hidden = false;
         ttsSaveBtn.disabled = false;
+        renderWaveformFromBlob(blob);
       }
 
       function clearTtsAudio() {
         applyTtsAudio(null);
+      }
+
+      async function renderWaveformFromBlob(blob) {
+        let audioContext;
+        try {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          const arrayBuffer = await blob.arrayBuffer();
+          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
+          const channelData = audioBuffer.getChannelData(0);
+          const samplePoints = Math.min(channelData.length, 2000);
+          const step = Math.floor(channelData.length / samplePoints) || 1;
+          const samples = new Float32Array(samplePoints);
+          for (let i = 0; i < samplePoints; i += 1) {
+            const start = i * step;
+            const end = Math.min(start + step, channelData.length);
+            let sum = 0;
+            for (let j = start; j < end; j += 1) {
+              sum += Math.abs(channelData[j]);
+            }
+            samples[i] = sum / (end - start || 1);
+          }
+          waveformData = {
+            samples,
+            duration: audioBuffer.duration,
+          };
+          drawWaveform(0);
+          await audioContext.close();
+        } catch (error) {
+          console.warn("Failed to render waveform", error);
+          waveformData = null;
+          drawWaveform();
+          if (audioContext) {
+            try {
+              await audioContext.close();
+            } catch (closeErr) {
+              console.warn("Failed to close AudioContext", closeErr);
+            }
+          }
+        }
+      }
+
+      function drawWaveform(progressFraction = null) {
+        if (!ttsWaveformCtx) {
+          return;
+        }
+        const width = ttsWaveformCanvas.clientWidth || 640;
+        if (ttsWaveformCanvas.width !== width) {
+          ttsWaveformCanvas.width = width;
+        }
+        const height = ttsWaveformCanvas.height;
+        ttsWaveformCtx.clearRect(0, 0, width, height);
+        ttsWaveformCtx.fillStyle = "rgba(148,163,184,0.2)";
+        ttsWaveformCtx.fillRect(0, 0, width, height);
+
+        if (waveformData && waveformData.samples.length > 0) {
+          const samples = waveformData.samples;
+          const step = width / samples.length;
+          ttsWaveformCtx.fillStyle = "rgba(37,99,235,0.6)";
+          for (let i = 0; i < samples.length; i += 1) {
+            const x = Math.floor(i * step);
+            const amp = samples[i];
+            const h = Math.max(1, Math.min(amp * height * 1.8, height));
+            const y = Math.floor((height - h) / 2);
+            ttsWaveformCtx.fillRect(x, y, Math.ceil(step), h);
+          }
+        }
+
+        if (progressFraction !== null && waveformData && waveformData.duration > 0) {
+          const clamped = Math.max(0, Math.min(1, progressFraction));
+          const x = Math.floor(clamped * width);
+          ttsWaveformCtx.fillStyle = "rgba(220,38,38,0.8)";
+          ttsWaveformCtx.fillRect(x, 0, 2, height);
+        }
       }
 
       function parsePort(value) {
@@ -344,6 +626,11 @@
 
       saveConfigBtn.addEventListener("click", async () => {
         try {
+          console.log("[UI] Save connection config", {
+            host: hostInput.value.trim(),
+            port: parsePort(portInput.value),
+            timeout: parseTimeout(timeoutInput.value),
+          });
           const body = {
             host: hostInput.value.trim() || undefined,
             port: parsePort(portInput.value),
@@ -369,6 +656,11 @@
       testConnectionBtn.addEventListener("click", async () => {
         showStatus("연결 확인 중...", false, true);
         try {
+          console.log("[UI] Connection test requested", {
+            host: hostInput.value.trim(),
+            port: parsePort(portInput.value),
+            timeout: parseTimeout(timeoutInput.value),
+          });
           const body = {
             host: hostInput.value.trim() || undefined,
             port: parsePort(portInput.value),
@@ -380,6 +672,7 @@
             body: JSON.stringify(body),
           });
           const data = await res.json();
+          console.log("[UI] Connection test response", { ok: res.ok, models: data.models });
           if (!res.ok) {
             throw new Error(data.detail || "연결에 실패했습니다.");
           }
@@ -396,6 +689,7 @@
 
       translateBtn.addEventListener("click", async () => {
         const text = sourceText.value.trim();
+        console.log("[UI] Translate requested", { length: text.length, model: modelSelect.value });
         if (!text) {
           showStatus("영어 텍스트를 입력해 주세요.", true);
           return;
@@ -446,6 +740,7 @@
             body.retry_garbage_attempts = retryAttempts;
           }
           resetProgress();
+          console.log("[UI] Translate payload", body);
           const res = await fetch("/api/translate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -469,6 +764,7 @@
             showStatus("번역이 완료되었습니다.");
           }
         } catch (error) {
+          console.error("[UI] Translate error", error);
           if (error && error.name === "AbortError") {
             showStatus("번역을 중지했습니다.");
             resetProgress();
@@ -486,6 +782,7 @@
       });
 
       clearBtn.addEventListener("click", () => {
+        console.log("[UI] Clear requested");
         sourceText.value = "";
         translatedText.value = "";
         showStatus("", false);
@@ -499,7 +796,15 @@
         showTtsStatus("", false);
         ttsStopBtn.disabled = true;
         ttsSpeakBtn.disabled = false;
-        ttsSpeakerInput.value = "";
+        if (ttsSpeakerSelect.options.length > 0) {
+          ttsSpeakerSelect.selectedIndex = 0;
+        }
+        ttsSpeakerCustomInput.value = "";
+        ttsSpeakerWavInput.value = DEFAULT_SPEAKER_WAV;
+        ttsLanguageInput.value = DEFAULT_LANGUAGE_CODE;
+        ttsSaveOutputCheckbox.checked = false;
+        ttsFileNameInput.value = "";
+        ttsSaveOutputCheckbox.dispatchEvent(new Event("change"));
       });
 
       stopBtn.addEventListener("click", () => {
@@ -514,6 +819,7 @@
 
       ttsSpeakBtn.addEventListener("click", async () => {
         const text = sourceText.value.trim();
+        console.log("[UI] TTS speak requested", { length: text.length });
         if (!text) {
           showTtsStatus("영어 텍스트를 입력해 주세요.", true);
           return;
@@ -532,16 +838,29 @@
           resetTtsProgress();
           clearTtsAudio();
 
-          const speaker = ttsSpeakerInput.value.trim();
+          const userLanguage = ttsLanguageInput.value.trim();
+          const language = userLanguage || ttsDefaultLanguageInput.value.trim() || "en";
+          const selectedSpeaker = ttsSpeakerSelect.value || "";
+          const customSpeaker = ttsSpeakerCustomInput.value.trim();
+          const speaker = customSpeaker || selectedSpeaker || undefined;
+          const speakerWav = ttsSpeakerWavInput.value.trim() || undefined;
+          const saveOutput = ttsSaveOutputCheckbox.checked;
+          const fileName = ttsFileNameInput.value.trim() || undefined;
+
+          const payload = {
+            text,
+            language,
+            speaker,
+            speaker_wav: speakerWav,
+            save_output: saveOutput,
+            filename: fileName,
+          };
+          console.log("[UI] TTS payload", payload);
 
           const res = await fetch("/api/tts", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              text,
-              language: "en",
-              speaker: speaker || undefined,
-            }),
+            body: JSON.stringify(payload),
             signal: controller.signal,
           });
 
@@ -556,6 +875,7 @@
             showTtsStatus("낭독을 중지했습니다.");
             resetTtsProgress();
           } else {
+            console.error("[UI] TTS error", error);
             showTtsStatus((error && error.message) || "낭독에 실패했습니다.", true);
             resetTtsProgress();
             clearTtsAudio();
@@ -599,6 +919,65 @@
         document.body.removeChild(link);
       });
 
+      ttsSaveSettingsBtn.addEventListener("click", () => {
+        saveTtsSettings();
+      });
+
+      ttsReloadSpeakersBtn.addEventListener("click", () => {
+        loadTtsSettings(true);
+      });
+
+      ttsDefaultSpeakerSelect.addEventListener("change", () => {
+        if (!ttsSpeakerCustomInput.value.trim()) {
+          ttsSpeakerSelect.value = ttsDefaultSpeakerSelect.value || "";
+        }
+      });
+
+      ttsSpeakerSelect.addEventListener("change", () => {
+        ttsSpeakerCustomInput.value = "";
+      });
+
+      ttsSaveOutputCheckbox.addEventListener("change", () => {
+        const enabled = ttsSaveOutputCheckbox.checked;
+        ttsFileNameInput.disabled = !enabled;
+        if (!enabled) {
+          ttsFileNameInput.value = "";
+        }
+      });
+      ttsSpeakerCustomInput.addEventListener("input", () => {
+        if (ttsSpeakerCustomInput.value.trim()) {
+          ttsSpeakerSelect.value = "";
+        }
+      });
+
+
+      ttsAudio.addEventListener("timeupdate", () => {
+        if (waveformData && waveformData.duration > 0) {
+          drawWaveform(ttsAudio.currentTime / waveformData.duration);
+        }
+      });
+
+      ttsAudio.addEventListener("play", () => {
+        if (waveformData && waveformData.duration > 0) {
+          drawWaveform(ttsAudio.currentTime / waveformData.duration);
+        }
+      });
+
+      ttsAudio.addEventListener("ended", () => {
+        if (waveformData && waveformData.duration > 0) {
+          drawWaveform(1);
+        }
+      });
+
+      window.addEventListener("resize", () => {
+        if (waveformData && waveformData.duration > 0) {
+          const progress = ttsAudio.currentTime / waveformData.duration;
+          drawWaveform(progress);
+        } else {
+          drawWaveform();
+        }
+      });
+
       // Initialise state
       replaceModelOptions(defaultState.models);
       showStatus("", false);
@@ -624,6 +1003,11 @@
       showTtsStatus("", false);
       clearTtsAudio();
       ttsStopBtn.disabled = true;
+      ttsSaveBtn.title = "다운로드";
+      populateSpeakerSelects([], DEFAULT_SPEAKER_NAME);
+      ttsSpeakerWavInput.value = DEFAULT_SPEAKER_WAV;
+      ttsLanguageInput.value = DEFAULT_LANGUAGE_CODE;
+      loadTtsSettings();
 
       async function handleStreamingResponse(response, includeText) {
         if (!response.ok || !response.body) {
@@ -822,17 +1206,45 @@
             }
             showTtsStatus(event.message || "낭독 중...", false, true);
             break;
-          case "done":
-            updateTtsProgress(event.percent ?? 100);
-            showTtsStatus("낭독이 완료되었습니다.");
-            if (event.audio_base64) {
-              const blob = decodeBase64Audio(event.audio_base64, event.mime || "audio/mpeg");
-              applyTtsAudio(blob);
+        case "done":
+          updateTtsProgress(event.percent ?? 100);
+          let doneMessage = "낭독이 완료되었습니다.";
+          if (event.saved_path) {
+            doneMessage = `${doneMessage} 저장 위치: ${event.saved_path}`;
+          }
+          if (event.speaker) {
+            doneMessage = `${doneMessage} (Speaker: ${event.speaker})`;
+          }
+          showTtsStatus(doneMessage);
+          if (event.language) {
+            ttsLanguageInput.value = event.language;
+          }
+          if (event.speaker && !ttsSpeakerCustomInput.value.trim()) {
+            if (Array.from(ttsSpeakerSelect.options).some((opt) => opt.value === event.speaker)) {
+              ttsSpeakerSelect.value = event.speaker;
+            } else {
+              ttsSpeakerCustomInput.value = event.speaker;
             }
-            break;
+          }
+          if (event.filename && ttsSaveOutputCheckbox.checked) {
+            ttsFileNameInput.value = event.filename;
+          }
+          if (event.saved_path) {
+            ttsSaveBtn.title = `다운로드 (저장 위치: ${event.saved_path})`;
++          } else if (event.filename) {
++            ttsSaveBtn.title = `다운로드 (${event.filename})`;
++          } else {
++            ttsSaveBtn.title = "다운로드";
+           }
+           if (event.audio_base64) {
+            const blob = decodeBase64Audio(event.audio_base64, event.mime || "audio/mpeg");
+            applyTtsAudio(blob);
+          }
+          break;
           case "error":
             resetTtsProgress();
             showTtsStatus(event.message || "낭독에 실패했습니다.", true);
+            ttsSaveBtn.title = "다운로드";
             applyTtsAudio(null);
             break;
         }

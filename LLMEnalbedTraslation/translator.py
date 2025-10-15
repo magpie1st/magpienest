@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 from typing import Iterable, Optional
@@ -22,6 +23,8 @@ else:
     from .config import JetsonConnectionConfig
     from .text_utils import TokenEstimator, chunk_text, is_garbage_translation
 
+
+logger = logging.getLogger(__name__)
 
 PROMPT_TEMPLATE = """You are a professional English→Korean literary translator.
     Task: Translate the following English text into Korean.
@@ -123,8 +126,19 @@ class TranslationService:
         timeout: int | None = None,
         strip_think_tag: bool = False,
     ) -> TranslationResult:
+        source_text = (english_text or "").strip()
+
+        logger.debug(
+            "[translator] request received | model=%s stream=%s len=%d host=%s port=%s",
+            model,
+            stream,
+            len(source_text),
+            host,
+            port,
+        )
+
         iterator, _ = self.iter_translate_chunks(
-            english_text,
+            source_text,
             model,
             host=host,
             port=port,
@@ -141,7 +155,11 @@ class TranslationService:
         for _, _, chunk_text in iterator:
             aggregate.append(chunk_text)
         translated = "\n\n".join(part for part in aggregate if part)
-        source_text = (english_text or "").strip()
+        logger.debug(
+            "[translator] translation complete | model=%s chars=%d",
+            model,
+            len(translated),
+        )
         return TranslationResult(source_text=source_text, translated_text=translated.strip(), model=model)
 
     def iter_translate_chunks(
@@ -185,6 +203,13 @@ class TranslationService:
 
         def generator() -> Iterable[tuple[int, int, str]]:
             for idx, chunk in enumerate(chunks):
+                logger.debug(
+                    "[translator] chunk %d/%d | len=%d stream=%s",
+                    idx + 1,
+                    total_chunks,
+                    len(chunk),
+                    stream,
+                )
                 chunk_prompt = self._build_prompt(template=prompt_template, source=chunk)
                 if total_chunks > 1:
                     chunk_prompt = (
@@ -219,6 +244,12 @@ class TranslationService:
                         f"번역 결과가 비정상적으로 감지되었습니다. {idx + 1}/{total_chunks} 번째 조각을 다시 시도해 주세요."
                     )
 
+                logger.debug(
+                    "[translator] chunk %d/%d complete | len=%d",
+                    idx + 1,
+                    total_chunks,
+                    len(translated_chunk),
+                )
                 yield idx, total_chunks, self._post_process_chunk(translated_chunk, strip_think_tag)
 
         return generator(), total_chunks
